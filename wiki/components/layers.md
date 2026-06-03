@@ -22,7 +22,7 @@ _最后更新：2026-06-03_
 | meta-qcom-hwe | github.com/qualcomm-linux | `a5fdd68` | 根（机器定义所在） |
 | meta-qcom-distro | github.com/qualcomm-linux | `08cc4b0` | 根（distro 定义所在） |
 | meta-qcom-qim-product-sdk | github.com/qualcomm-linux | `eb937f9` | 根 |
-| **meta-radxa-dragon** | **本地 `../meta-radxa-dragon`** | 本地开发（曾 `c898e25`） | 根（板级 overlay） |
+| **meta-radxa-dragon** | github.com/CmST0us | `bf47b24`（scarthgap 最新） | 根（板级 overlay） |
 
 ## 子 layer 的处理
 
@@ -33,7 +33,8 @@ _最后更新：2026-06-03_
 
 ## meta-radxa-dragon（板级 overlay）
 
-当前为**本地开发模式**，详见 [versioning](../topics/versioning.md)。它提供：
+当前为**远端模式**，commit 锁定到 scarthgap 分支最新 `bf47b24`，详见
+[versioning](../topics/versioning.md)。它提供：
 - machine 配置 `qcs6490-radxa-dragon-q6a`（见 [machine 页](machine-qcs6490-radxa-dragon-q6a.md)）；
 - 自定义内核 `linux-qcom-custom`（radxa kernel fork）；
 - WiFi/BT 固件配方 `wifibt-firmware`（见 [driver 页](driver-wifi-bt-aic8800d80.md)）；

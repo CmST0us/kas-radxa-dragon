@@ -27,3 +27,11 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
   `MACHINE_ESSENTIAL_EXTRA_RRECOMMENDS += " wifibt-firmware-aic8800d80-usb"`（commit `b82b968`，未 push）。
 - 影响页：topics/versioning.md, topics/build-and-dev-workflow.md,
   components/layers.md, components/machine-qcs6490-radxa-dragon-q6a.md, components/driver-wifi-bt-aic8800d80.md
+
+## [2026-06-03] change | meta-radxa-dragon 回切远端并锁定 scarthgap 最新 commit
+- `kas-radxa-q6a.yml` 中 `meta-radxa-dragon` 由本地模式（`path: ../meta-radxa-dragon`）
+  回切远端：启用 `url` + `branch: scarthgap` + `path: layers/meta-radxa-dragon`，
+  `commit` 由旧的 `c898e25` 更新为 scarthgap 分支最新 `bf47b24`
+  （`git ls-remote https://github.com/CmST0us/meta-radxa-dragon.git scarthgap`）。
+- 影响页：components/layers.md, topics/versioning.md, CLAUDE.md（第五节状态备忘）。
+- 相关文件：kas-radxa-q6a.yml
