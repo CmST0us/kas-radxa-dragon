@@ -75,6 +75,19 @@ kas shell kas-radxa-q6a.yml -c "bitbake -g qcom-multimedia-image && grep <pkg> p
 > 已知风险：sstate/downloads 未做跨 run 缓存（GitHub Actions 缓存上限 10GB，远小于
 > Yocto 缓存体量），故每次都是冷构建、较慢。需要加速可自建 sstate-mirror / downloads 镜像。
 
+## 常见构建故障
+
+### gflags do_unpack：`No up to date source ... shallow clone not enabled`
+- 现象：`gflags-2.2.2` 的 `do_unpack` 失败，提示缺 `master`。
+- 根因：**上游 gflags 已把默认分支 `master` 改名为 `main`**，而 meta-oe(scarthgap) 的 recipe
+  仍写 `branch=master`。全新检出的 git 镜像只有 `main`、无 `master`，unpack 的
+  `git branch --contains <SRCREV> --list master` 返空。锁定的 SRCREV 其实是 `main` 的祖先。
+- **修复（已内置）**：meta-radxa-dragon 的 bbappend
+  `dynamic-layers/openembedded-layer/recipes-support/gflags/gflags_2.2.2.bbappend`
+  把 SRC_URI 改为 `branch=main`（SRCREV 不变）。上游 meta-oe 修正后可删。
+- 不建议用复用旧 downloads 的方式绕过——那只是掩盖问题，且不可复现。
+- 见 log `[2026-06-04] change`。
+
 ## 相关
 - [kas-configuration](kas-configuration.md)
 - [versioning](versioning.md)

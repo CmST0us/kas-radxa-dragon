@@ -16,6 +16,13 @@ _最后更新：2026-06-03_
 | `branch` + `commit`（**当前用法**） | 是 | 发布 / CI |
 | `tag` | 是 | 上游有 tag 时 |
 
+## 基线决策：维持 QLI.1.5-Ver.1.1（不 bump 到 scarthgap 尖端）
+
+2026-06-04：曾检查发现 11 个远端 layer 中 10 个落后于各自 `scarthgap` HEAD，并试着 bump，
+但**已撤回**。决定继续锁定 QLI.1.5-Ver.1.1 对应的 commit——Qualcomm BSP 层与 meta-radxa-dragon
+的内核（`kernel.qclinux.1.0.r1-rel`）都对齐该发布点，贸然跟到 scarthgap 尖端的兼容性无保障。
+升级基线应整体迁移到新的 QLI 发布，而非逐个 bump。
+
 ## lockfile 模式（推荐演进方向）
 
 ```bash

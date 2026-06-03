@@ -52,3 +52,18 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
   （checkout 之后、装依赖之前）。
 - 影响页：topics/build-and-dev-workflow.md（CI 章节）
 - 相关文件：.github/workflows/build.yml
+
+## [2026-06-04] decision | 维持 QLI.1.5-Ver.1.1 基线，不 bump 到 scarthgap 尖端
+- 曾检查发现 11 个远端 layer 中 10 个落后于其 scarthgap HEAD，并试 bump，但已**撤回**。
+- 决定继续锁定 QLI.1.5-Ver.1.1 对应的 commit：Qualcomm BSP 与 meta-radxa-dragon 内核
+  (kernel.qclinux.1.0.r1-rel) 都对齐该发布点，尖端 scarthgap 兼容性无保障。
+- 影响页：topics/versioning.md
+
+## [2026-06-04] change | 修复 gflags do_unpack（上游分支 master→main 改名）
+- 根因：gflags(meta-oe scarthgap) 写死 `branch=master`，但 github 上游已将默认分支改名为 `main`，
+  全新检出的镜像只有 main、无 master，unpack 的 `git branch --contains <rev> --list master` 返空。
+  确认 SRCREV `e171aa2d` 是 main 的祖先。
+- 修复：在 meta-radxa-dragon 加 bbappend
+  `dynamic-layers/openembedded-layer/recipes-support/gflags/gflags_2.2.2.bbappend`，
+  将 SRC_URI 改为 `branch=main`（SRCREV 不变）。**不复用旧 downloads**。
+- 影响页：topics/build-and-dev-workflow.md, components/layers.md

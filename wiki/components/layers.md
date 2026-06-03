@@ -38,7 +38,9 @@ _最后更新：2026-06-03_
 - machine 配置 `qcs6490-radxa-dragon-q6a`（见 [machine 页](machine-qcs6490-radxa-dragon-q6a.md)）；
 - 自定义内核 `linux-qcom-custom`（radxa kernel fork）；
 - WiFi/BT 固件配方 `wifibt-firmware`（见 [driver 页](driver-wifi-bt-aic8800d80.md)）；
-- fastrpc、linux-firmware、镜像配方等的板级定制。
+- fastrpc、linux-firmware、镜像配方等的板级定制；
+- gflags 分支改名修复 bbappend（`dynamic-layers/openembedded-layer/.../gflags_2.2.2.bbappend`，
+  见 [构建故障](../topics/build-and-dev-workflow.md#常见构建故障)）。
 
 远端：`git@github.com:CmST0us/meta-radxa-dragon.git`（fork 自 `radxa/meta-radxa-dragon`）。
 
