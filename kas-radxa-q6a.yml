@@ -124,16 +124,15 @@ repos:
     commit: eb937f9700e65270725824772e05ab7bc5a32a57
     path: layers/meta-qcom-qim-product-sdk
 
-  # --- 板级 overlay (本地开发中) ---
-  # 当前指向本地副本 ../meta-radxa-dragon：无 url，kas 不 clone/checkout，
-  # 直接使用该目录，改动即时生效，便于调试 aic8800 等驱动/固件。
-  # 调试完成后回切远端：删除 path 行，启用下面 4 行注释。
+  # --- 板级 overlay (远端模式) ---
+  # 已回切远端：kas 按 url/branch/commit 检出到 layers/meta-radxa-dragon。
+  # commit 锁定到 scarthgap 分支最新。
+  # 如需本地调试，改为 `path: ../meta-radxa-dragon` 并删除 url/branch/commit。
   meta-radxa-dragon:
-    path: ../meta-radxa-dragon
-    # url: https://github.com/CmST0us/meta-radxa-dragon.git
-    # branch: scarthgap
-    # commit: c898e252d3ce3305a59835e948c1a2ccc01d83f8
-    # path: layers/meta-radxa-dragon
+    url: https://github.com/CmST0us/meta-radxa-dragon.git
+    branch: scarthgap
+    commit: bf47b24bdb3f30b20c5152fe46638aef6236d891
+    path: layers/meta-radxa-dragon
 
 # ── local.conf 内容 (替代原 set_bb_env.sh 生成的 local/auto/site.conf) ──
 local_conf_header:

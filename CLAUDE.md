@@ -109,9 +109,10 @@ wiki/
 
 ## 五、当前状态备忘（易变，细节以 wiki 为准）
 
-- `meta-radxa-dragon` 目前为**本地开发模式**：`kas-radxa-q6a.yml` 中用 `path: ../meta-radxa-dragon`
-  指向同级本地副本（无 `url`，kas 不接管），改动即时生效。调试完成后回切远端并更新锁定 commit。
-- 因此请在本仓库目录（`kas-radxa-dragon/`）下运行 kas，使 `../meta-radxa-dragon` 正确解析。
+- `meta-radxa-dragon` 目前为**远端模式**：`kas-radxa-q6a.yml` 中用 `url` + `branch: scarthgap`
+  + `commit` 锁定，commit 已更新为 scarthgap 分支最新 `bf47b24`，kas 检出到 `layers/meta-radxa-dragon`。
+- 需要调试驱动/固件时，可临时改回本地模式（`path: ../meta-radxa-dragon`，无 `url`），改动即时生效；
+  此时请在本仓库目录（`kas-radxa-dragon/`）下运行 kas，使 `../meta-radxa-dragon` 正确解析。
 
 ---
 
