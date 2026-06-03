@@ -1,0 +1,175 @@
+# kas 配置：Radxa Dragon Q6A (QCS6490) / Qualcomm Linux QLI.1.5
+#
+# 该文件取代原先基于 `repo` + setup_radxa_q6a + set_bb_env.sh 的流程，
+# 用 kas 统一管理 layer 检出与构建配置。
+#
+# 各 layer 的 URL / commit 来自:
+#   .repo/manifests/qcom-6.6.90-QLI.1.5-Ver.1.1_qim-product-sdk-2.0.1.xml
+#   (当前 .repo/manifest.xml 所 include 的版本)
+# 外加 meta-radxa-dragon、meta-qcom-qim-product-sdk 两个 EXTRALAYERS。
+#
+# 用法 (在本仓库根目录执行):
+#   pip install kas        # 或: pipx install kas
+#   kas build  kas-radxa-q6a.yml          # 检出 layer 并构建 target
+#   kas shell  kas-radxa-q6a.yml          # 进入已配置好的 bitbake 环境
+#   kas checkout kas-radxa-q6a.yml        # 只检出 layer，不构建
+#
+# 默认 layer 检出到本仓库的 layers/，构建在 build/，源码缓存在 downloads/
+# (均已在 .gitignore 中忽略)。
+#
+# 可选环境变量:
+#   KAS_WORK_DIR   工作根目录(默认 kas 的运行目录)
+#   KAS_BUILD_DIR  构建目录(默认 $KAS_WORK_DIR/build)
+#   DL_DIR         复用已有下载缓存可避免重新下载
+
+header:
+  version: 14
+
+# ── 构建系统与目标 ───────────────────────────────────────────────
+build_system: openembedded
+
+machine: qcs6490-radxa-dragon-q6a
+distro: qcom-wayland
+
+# 默认构建目标。qcom-wayland 发行版常用的图形镜像；按需改为
+# qcom-console-image / qcom-minimal-image / qcom-multimedia-test-image 等。
+target:
+  - qcom-multimedia-image
+
+# ── 所有 layer 仓库 ──────────────────────────────────────────────
+# path 统一放在 layers/ 下，与原 repo 布局一致，可复用已检出的源码。
+repos:
+
+  # --- Poky / OE-core (提供 bitbake) ---
+  poky:
+    url: https://git.yoctoproject.org/poky
+    branch: scarthgap
+    commit: 0ce88bc3474d29122e6f319cf474e5c5dce55419
+    path: layers/poky
+    layers:
+      meta:
+      meta-poky:
+
+  # --- meta-openembedded (按原 bblayers 仅启用部分子 layer) ---
+  meta-openembedded:
+    url: https://github.com/openembedded/meta-openembedded
+    branch: scarthgap
+    commit: 6c9f1f8d4538119803bf793747b65e4d23c33544
+    path: layers/meta-openembedded
+    layers:
+      meta-oe:
+      meta-python:
+      meta-perl:
+      meta-networking:
+      meta-multimedia:
+      meta-filesystems:
+      meta-gnome:
+
+  # --- 安全 / 虚拟化 / OTA / AI ---
+  meta-security:
+    url: https://git.yoctoproject.org/meta-security
+    branch: scarthgap
+    commit: bc865c5276c2ab4031229916e8d7c20148dfbac3
+    path: layers/meta-security
+    layers:
+      .:          # meta-security 根本身就是一个 layer
+      meta-tpm:
+
+  meta-selinux:
+    url: https://git.yoctoproject.org/meta-selinux
+    branch: scarthgap
+    commit: 4fbbcab2cb452c9430cba780e7cb11b2165c997a
+    path: layers/meta-selinux
+
+  meta-virtualization:
+    url: https://git.yoctoproject.org/meta-virtualization
+    branch: scarthgap
+    commit: 94ee980814d7c5824449b2745a934664adbf3007
+    path: layers/meta-virtualization
+
+  meta-updater:
+    url: https://github.com/uptane/meta-updater
+    branch: scarthgap
+    commit: 92f0e7aa93966e184beb1ccdfea6c8fdb27d2b18
+    path: layers/meta-updater
+
+  meta-tensorflow:
+    url: https://git.yoctoproject.org/meta-tensorflow
+    branch: scarthgap
+    commit: 1a0c74c9666db0d89c20c9c85b4377931476886c
+    path: layers/meta-tensorflow
+
+  # --- Qualcomm BSP ---
+  meta-qcom:
+    url: https://github.com/Linaro/meta-qcom
+    branch: scarthgap
+    commit: ec80a36bce11d8182b4bb2a6fa0359adfeccde0a
+    path: layers/meta-qcom
+
+  meta-qcom-hwe:
+    url: https://github.com/qualcomm-linux/meta-qcom-hwe
+    branch: scarthgap
+    commit: a5fdd68fe7111e9666d39e42980d270ca9f83bcf
+    path: layers/meta-qcom-hwe
+
+  meta-qcom-distro:
+    url: https://github.com/qualcomm-linux/meta-qcom-distro
+    branch: scarthgap
+    commit: 08cc4b0bcbe2c0b23d9f786e48a3a826a593bc18
+    path: layers/meta-qcom-distro
+
+  meta-qcom-qim-product-sdk:
+    url: https://github.com/qualcomm-linux/meta-qcom-qim-product-sdk
+    branch: scarthgap
+    commit: eb937f9700e65270725824772e05ab7bc5a32a57
+    path: layers/meta-qcom-qim-product-sdk
+
+  # --- 板级 overlay ---
+  meta-radxa-dragon:
+    url: https://github.com/CmST0us/meta-radxa-dragon.git
+    branch: scarthgap
+    commit: c898e252d3ce3305a59835e948c1a2ccc01d83f8
+    path: layers/meta-radxa-dragon
+
+# ── local.conf 内容 (替代原 set_bb_env.sh 生成的 local/auto/site.conf) ──
+local_conf_header:
+
+  # 来自 meta-qcom-distro/conf/local.conf 的默认设置
+  distro-defaults: |
+    CONF_VERSION = "2"
+    BBMASK ?= ""
+    BB_GENERATE_MIRROR_TARBALLS = "0"
+    BB_GIT_VERBOSE_FETCH = "0"
+    BBMULTICONFIG = "qcom-guestvm"
+    PATCHRESOLVE = "noop"
+    CPU_COUNT = "${@oe.utils.cpu_count(at_least=2)}"
+    THREAD_COUNT = "${@oe.utils.cpu_count(at_least=2, at_most=20)}"
+    BB_NUMBER_THREADS ?= "${CPU_COUNT}"
+    BB_NUMBER_PARSE_THREADS ?= "${CPU_COUNT}"
+    BB_PRESSURE_MAX_CPU = "900000"
+    BB_PRESSURE_MAX_IO = "900000"
+    BB_PRESSURE_MAX_MEMORY = "900000"
+    PARALLEL_MAKE ?= "-j ${THREAD_COUNT} -l ${THREAD_COUNT}"
+    BBMASK += "/meta-updater/recipes-sota/aktualizr/aktualizr_git.bb"
+    RDEPENDS:packagegroup-qcom:remove = "packagegroup-qcom-ppat"
+
+  # 来自原 auto.conf 的设置 (DISTRO/MACHINE 已由 kas 写入)
+  qcom-bsp: |
+    SDKMACHINE = "x86_64"
+    DEBUG_BUILD = "0"
+    PERFORMANCE_BUILD = "0"
+    QCOM_SELECTED_BSP = "custom"
+    BB_DANGLINGAPPENDS_WARNONLY_forcevariable = "false"
+    INHERIT += "rm_work"
+
+  # 来自原 site.conf。DL_DIR/SSTATE_DIR 默认落在本仓库根目录下，用 ?=
+  # 便于通过环境变量覆盖以复用外部缓存 (${TOPDIR} 为构建目录，其上一级即仓库根)。
+  # 并加入 codelinaro 镜像源。
+  site: |
+    DL_DIR ?= "${TOPDIR}/../downloads"
+    SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"
+    MIRRORS += "\
+        git://github.com git://git.codelinaro.org/clo/yocto-mirrors/github/ \
+        git://.*/.*/ git://git.codelinaro.org/clo/yocto-mirrors/ \
+        https://.*/.*/ https://codelinaro.jfrog.io/artifactory/codelinaro-le/ \
+    "

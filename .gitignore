@@ -1,0 +1,10 @@
+# kas 检出与构建产物（不纳入版本管理）
+/layers/
+/build/
+/build-*/
+/downloads/
+/sstate-cache/
+/.repo/
+
+# kas dump 生成的临时文件
+*.lock.yml.tmp
