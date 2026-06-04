@@ -44,3 +44,11 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
 - 背景：本地/容器环境磁盘仅 ~38GB，全量镜像构建在编译内核时 ENOSPC 失败，改用 CI 构建。
 - 影响页：topics/build-and-dev-workflow.md（新增 CI 章节）, index.md
 - 相关文件：.github/workflows/build.yml
+
+## [2026-06-04] change | CI 修复 Ubuntu 24.04 user namespace 限制
+- 首次 CI 运行报 "User namespaces are not usable by BitBake, possibly due to AppArmor"。
+  Ubuntu 24.04 (noble) 默认用 AppArmor 限制非特权 user namespace，bitbake 需要它。
+- 在 build.yml 加一步 `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`
+  （checkout 之后、装依赖之前）。
+- 影响页：topics/build-and-dev-workflow.md（CI 章节）
+- 相关文件：.github/workflows/build.yml

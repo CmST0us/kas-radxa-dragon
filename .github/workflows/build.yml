@@ -51,6 +51,12 @@ jobs:
       - name: Checkout integration repo
         uses: actions/checkout@v4
 
+      - name: Enable unprivileged user namespaces
+        # Ubuntu 24.04 (noble) 默认用 AppArmor 限制非特权 user namespace，
+        # bitbake 需要它，否则报 "User namespaces are not usable by BitBake"。
+        run: |
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Install Yocto host dependencies
         run: |
           sudo apt-get update

@@ -68,6 +68,9 @@ kas shell kas-radxa-q6a.yml -c "bitbake -g qcom-multimedia-image && grep <pkg> p
   `kas dump` 健康检查 → `kas build --target <input>` → 上传
   `build/*/deploy/images/qcs6490-radxa-dragon-q6a/**` 为 artifact（保留 7 天）。
 - runner 用户为非 root（`runner`），bitbake 的 "不要以 root 运行" 检查自然通过。
+- Ubuntu 24.04 默认用 AppArmor 限制非特权 user namespace，bitbake 需要它，故构建前先
+  `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`，否则报
+  "User namespaces are not usable by BitBake"。
 
 > 已知风险：sstate/downloads 未做跨 run 缓存（GitHub Actions 缓存上限 10GB，远小于
 > Yocto 缓存体量），故每次都是冷构建、较慢。需要加速可自建 sstate-mirror / downloads 镜像。
