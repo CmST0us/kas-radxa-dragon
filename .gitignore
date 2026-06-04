@@ -6,5 +6,9 @@
 /sstate-cache/
 /.repo/
 
+# 刷写脚本下载/解压的 Radxa 固件包与 edl-ng 工具
+/scripts/firmware/
+/scripts/edl-ng/
+
 # kas dump 生成的临时文件
 *.lock.yml.tmp

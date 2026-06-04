@@ -67,3 +67,40 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
   `dynamic-layers/openembedded-layer/recipes-support/gflags/gflags_2.2.2.bbappend`，
   将 SRC_URI 改为 `branch=main`（SRCREV 不变）。**不复用旧 downloads**。
 - 影响页：topics/build-and-dev-workflow.md, components/layers.md
+
+## [2026-06-04] change | 新增 edl-ng 刷写脚本 scripts/flash-edl.sh
+- 参考 flange `builder/flash.py:QualcommFlashStrategy`，写 EDL(9008) 刷写脚本。
+- 子命令 detect/ufs/spinor/all/reset；系统盘走 QLI 分区刷写
+  `edl-ng --loader prog_firehose_ddr.elf --memory UFS rawprogram <rawprogram*.xml> <patch*.xml>`，
+  非 flange 的整盘 write-sector（Yocto 产出分区镜像+rawprogram，非单个 raw.img）。
+- 设备探测读 /sys（VID:PID 05c6:9008），不抢 USB 会话。
+- 影响页：topics/flashing.md（新增）, index.md
+
+## [2026-06-04] decision | 路径规则：禁止工程外/本机路径引用
+- CLAUDE.md 新增「一·五、路径规则（硬性）」：禁止 `/home/<user>/...` 等本机绝对路径与
+  工程目录外引用；外部资源须下载进工程内（scripts/firmware/、downloads/）再用；唯一例外是
+  本地开发的相对路径 `../meta-radxa-dragon`。
+- 据此清理 CLAUDE.md/wiki/yml 中所有 `/home/eki/...`、旧 downloads 复用示例、本机 flat_build 路径。
+- 影响页：（CLAUDE.md）, overview.md, topics/build-and-dev-workflow.md, components/driver-wifi-bt-aic8800d80.md
+
+## [2026-06-04] change | flash 脚本改用 URL 下载固件包（去本机路径）
+- flash-edl.sh 去掉本机 FLAT_BUILD 路径，改为从
+  `dl.radxa.com/.../dragon-q6a_flat_build_wp_260120.zip` 下载并解压到 scripts/firmware/（gitignore），
+  loader/spinor/ufs_hlos 在该目录内自动定位。新增 `fetch` 子命令。
+- spinor 与 ufs 均默认用该固件包；UFS_DIR 可指向 kas 自构建 deploy/images/<machine>。
+- 影响页：topics/flashing.md, .gitignore
+
+## [2026-06-04] change | meta-radxa-dragon 回切远端，锁定 commit bf47b24
+- 编译验证通过后，把 `kas-radxa-q6a.yml` 中 `meta-radxa-dragon` 从本地开发模式
+  （`path: ../meta-radxa-dragon`）切回远端：`url=github.com/CmST0us/meta-radxa-dragon.git`、
+  `branch=scarthgap`、`commit=bf47b24bdb3f30b20c5152fe46638aef6236d891`、`path=layers/meta-radxa-dragon`。
+- 确认 `bf47b24` 即远端 scarthgap HEAD，已含本地开发期两笔提交：`b82b968`（装 AIC8800D80 固件）、
+  `bf47b24`（gflags master→main）；本地无领先远端的提交，回切后构建不缺内容。
+- `kas dump` 校验解析正常。
+- 影响页：CLAUDE.md（第五节）, topics/versioning.md, topics/build-and-dev-workflow.md, components/layers.md
+
+## [2026-06-04] change | flash 脚本 edl-ng 定位修正（去死路径 tools/）
+- 原脚本指向不存在的 `tools/linux/edl-ng/edl-ng`。改为定位顺序：EDL_NG 覆盖 →
+  scripts/edl-ng/（已下载）→ PATH（本机 /usr/bin/edl-ng 即命中）→ 自动下载到 scripts/edl-ng/。
+- 与固件包一致：edl-ng 也按需下载进工程内，不依赖工程外路径。
+- 影响页：topics/flashing.md, .gitignore

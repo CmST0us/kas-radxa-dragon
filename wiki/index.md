@@ -13,6 +13,7 @@ _最后更新：2026-06-03_
 - [topics/build-and-dev-workflow](topics/build-and-dev-workflow.md) — 构建命令、缓存复用、本地开发模式、CI（GitHub Actions）
 - [topics/versioning](topics/versioning.md) — layer 版本锁定、lockfile、本地↔远端切换
 - [topics/distro-and-images](topics/distro-and-images.md) — `qcom-wayland` 与 `qcom-multimedia-image` 的区别与关系
+- [topics/flashing](topics/flashing.md) — 用 `edl-ng` 在 EDL 模式刷写固件（`scripts/flash-edl.sh`）
 
 ## Components（实体：具体的东西）
 - [components/layers](components/layers.md) — 12 个 layer 的 URL / 锁定 commit / 角色

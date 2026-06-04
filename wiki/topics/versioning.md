@@ -33,22 +33,25 @@ diff 即知哪些 layer 变了。目前尚未启用该模式（仍直接在主 y
 
 ## 本地 ↔ 远端切换（meta-radxa-dragon）
 
-**当前为远端模式**，commit 锁定到 scarthgap 分支最新 `bf47b24`：
+**当前为远端锁定模式**（2026-06-04 调试完成后回切）：
 ```yaml
 meta-radxa-dragon:
   url: https://github.com/CmST0us/meta-radxa-dragon.git
   branch: scarthgap
-  commit: bf47b24bdb3f30b20c5152fe46638aef6236d891
+  commit: bf47b24bdb3f30b20c5152fe46638aef6236d891   # 含 aic8800 固件 + gflags 修复
   path: layers/meta-radxa-dragon
 ```
+锁定的 `bf47b24` 即远端 `scarthgap` 的 HEAD，已包含本地开发期的两笔提交
+（`b82b968` 装 AIC8800D80 固件、`bf47b24` gflags master→main）。
 
-**切回本地开发**（需调试驱动/固件时）：把上面四行换成
-`path: ../meta-radxa-dragon`（无 url，kas 不接管，改动即时生效）。
-
-**回切远端 / 升级 commit 流程**：
+**需要再次本地调试时**：注释上面 `url/branch/commit/path` 4 行，改用
+```yaml
+meta-radxa-dragon:
+  path: ../meta-radxa-dragon       # 无 url，kas 不接管，改动即时生效
+```
+调试稳定后回切远端：
 1. 在 `../meta-radxa-dragon` 把本地改动 `git push origin scarthgap`。
-2. 编辑 `kas-radxa-q6a.yml`：保留 url/branch/path，把 `commit:` 更新为
-   push 后的最新 HEAD（即 `git ls-remote <url> scarthgap`）。
+2. 编辑 `kas-radxa-q6a.yml`：恢复 `url/branch/commit/path`，把 `commit:` 更新为最新 HEAD。
 3. `kas dump` 确认解析正常；向 [log](../log.md) 记一条 `change`。
 
 > 否则锁定的 commit 不包含本地改动，远端构建会缺这部分。

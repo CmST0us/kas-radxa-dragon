@@ -31,6 +31,22 @@
 
 ---
 
+## 一·五、路径规则（硬性）
+
+> 脚本、配置、文档、wiki 中**一律只引用工程目录内的路径**，禁止越界与本机路径。
+
+具体：
+- **禁止本机绝对路径**（如 `/home/<user>/...`）——换不了机器、进不了 CI。连本仓库自身也用
+  相对路径或「在仓库根目录执行」表述，不写它的绝对路径。
+- **禁止引用工程目录之外的资源**。外部资源（如 Radxa 固件包、下载缓存）必须先落到工程内
+  目录（如 `scripts/firmware/`、`downloads/`，已 gitignore）再引用；用 **URL + 工程内缓存路径** 表达，
+  不写「我电脑里」的现成路径。
+- **唯一允许的工程外引用**：本地开发模式下 `meta-radxa-dragon` 的同级相对路径
+  `../meta-radxa-dragon`（kas 约定，相对且可移植，非本机绝对路径）。
+- 写任何路径前自问：换台机器 clone 下来还成立吗？不成立就改。
+
+---
+
 ## 二、关键工作约定（先读这条）
 
 > **每次对本仓库有实质改动（改 kas 配置、调整 layer、改 machine/distro、驱动/固件、
@@ -109,23 +125,22 @@ wiki/
 
 ## 五、当前状态备忘（易变，细节以 wiki 为准）
 
-- `meta-radxa-dragon` 目前为**远端模式**：`kas-radxa-q6a.yml` 中用 `url` + `branch: scarthgap`
-  + `commit` 锁定，commit 已更新为 scarthgap 分支最新 `bf47b24`，kas 检出到 `layers/meta-radxa-dragon`。
-- 需要调试驱动/固件时，可临时改回本地模式（`path: ../meta-radxa-dragon`，无 `url`），改动即时生效；
-  此时请在本仓库目录（`kas-radxa-dragon/`）下运行 kas，使 `../meta-radxa-dragon` 正确解析。
+- `meta-radxa-dragon` 目前为**远端锁定模式**：`kas-radxa-q6a.yml` 锁定
+  `url: https://github.com/CmST0us/meta-radxa-dragon.git` 的 commit `bf47b24`（远端 scarthgap HEAD，
+  含 aic8800 固件与 gflags 修复）。需本地调试时再临时切回 `path: ../meta-radxa-dragon`（见 wiki versioning）。
+- 请在本仓库目录（`kas-radxa-dragon/`）下运行 kas，使相对路径与缓存正确解析。
 
 ---
 
 ## 六、给开发者的常用命令
 
-```bash
-pip install kas                                   # 或 pipx install kas
-cd /home/eki/Project/carbon/kas-radxa-dragon
-kas dump  kas-radxa-q6a.yml                        # 先看解析结果
-kas build kas-radxa-q6a.yml                        # 检出 layer 并构建
-kas shell kas-radxa-q6a.yml                        # 进入 bitbake 环境
+在本仓库根目录执行：
 
-# 复用旧项目已下载的源码缓存，避免重新下载:
-DL_DIR=/home/eki/Project/carbon/qualcomm/radxa-q6a-qcom-linux/downloads \
-    kas build kas-radxa-q6a.yml
+```bash
+pip install kas                       # 或 pipx install kas
+kas dump  kas-radxa-q6a.yml           # 先看解析结果
+kas build kas-radxa-q6a.yml           # 检出 layer 并构建
+kas shell kas-radxa-q6a.yml           # 进入 bitbake 环境
+
+scripts/flash-edl.sh all              # 用 edl-ng 刷写（详见 wiki/topics/flashing.md）
 ```

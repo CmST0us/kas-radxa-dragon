@@ -8,10 +8,7 @@ _最后更新：2026-06-03_
 pip install kas          # 或 pipx install kas
 ```
 
-始终在本仓库目录运行 kas，使本地路径（`../meta-radxa-dragon`）正确解析：
-```bash
-cd /home/eki/Project/carbon/kas-radxa-dragon
-```
+始终**在本仓库根目录**运行 kas（路径与缓存均相对仓库根解析）。
 
 ## 常用命令
 
@@ -26,27 +23,20 @@ kas shell kas-radxa-q6a.yml      # 进入配好的 bitbake 环境，手动 bitba
 
 | 路径 | 内容 | 是否纳入 git |
 |---|---|---|
-| `layers/` | kas 检出的远端 layer | 否（.gitignore） |
-| `../meta-radxa-dragon` | 本地开发的板级 layer（同级目录） | 单独仓库 |
+| `layers/` | kas 检出的全部远端 layer（含 meta-radxa-dragon） | 否（.gitignore） |
 | `build/` | bitbake 构建目录（默认 `$KAS_WORK_DIR/build`） | 否 |
 | `downloads/`, `sstate-cache/` | 源码与共享状态缓存 | 否 |
 
 环境变量：`KAS_WORK_DIR`（工作根，默认运行目录）、`KAS_BUILD_DIR`（构建目录）。
-
-## 复用已有下载缓存
-
-旧 `repo` 项目已下载约 94GB 源码，可复用避免重下（`DL_DIR` 在 yml 里是 `?=`，可被覆盖）：
-
-```bash
-DL_DIR=/home/eki/Project/carbon/qualcomm/radxa-q6a-qcom-linux/downloads \
-    kas build kas-radxa-q6a.yml
-```
+源码缓存默认落在工程内 `downloads/`（见 [kas-configuration](kas-configuration.md) 的 `site` 段）。
+按[路径规则](../../CLAUDE.md)，不引用工程外的缓存目录。
 
 ## 本地开发 meta-radxa-dragon
 
-当前 `meta-radxa-dragon` 指向同级本地副本 `../meta-radxa-dragon`，**改动即时生效，无需 push**。
-适合调试板级配置、驱动、固件（如 [aic8800](../components/driver-wifi-bt-aic8800d80.md)）。
-调试完成后回切远端的步骤见 [versioning](versioning.md)。
+当前 `meta-radxa-dragon` 为**远端锁定模式**（commit `bf47b24`，由 kas 检出到 `layers/`）。
+需要调试板级配置、驱动、固件（如 [aic8800](../components/driver-wifi-bt-aic8800d80.md)）时，
+可临时把它切回同级本地副本 `../meta-radxa-dragon`（改动即时生效、无需 push），
+切换与回切步骤见 [versioning](versioning.md)。
 
 ## 验证某物是否进镜像
 

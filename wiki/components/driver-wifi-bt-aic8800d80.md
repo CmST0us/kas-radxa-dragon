@@ -59,7 +59,7 @@ CONFIG_BT_AIC_BTUSB=m              # 蓝牙 USB 模块
 
 ## 验证
 ```bash
-cd /home/eki/Project/carbon/kas-radxa-dragon
+# 在本仓库根目录执行
 kas shell kas-radxa-q6a.yml -c "bitbake -g qcom-multimedia-image && grep aic8800 pn-depends.dot"
 ```
 

@@ -31,8 +31,8 @@ Yocto/OpenEmbedded 构建的**集成仓库**。取代原先 `repo` + `setup_radx
 ## 快速上手
 
 ```bash
+# 在本仓库根目录执行
 pip install kas
-cd /home/eki/Project/carbon/kas-radxa-dragon
 kas build kas-radxa-q6a.yml
 ```
 

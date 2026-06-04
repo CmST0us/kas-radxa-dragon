@@ -124,10 +124,10 @@ repos:
     commit: eb937f9700e65270725824772e05ab7bc5a32a57
     path: layers/meta-qcom-qim-product-sdk
 
-  # --- 板级 overlay (远端模式) ---
-  # 已回切远端：kas 按 url/branch/commit 检出到 layers/meta-radxa-dragon。
-  # commit 锁定到 scarthgap 分支最新。
-  # 如需本地调试，改为 `path: ../meta-radxa-dragon` 并删除 url/branch/commit。
+  # --- 板级 overlay (远端锁定) ---
+  # 由 kas 从远端 clone/checkout 到 layers/meta-radxa-dragon。
+  # commit bf47b24 含 AIC8800D80 WiFi/BT 固件安装与 gflags master->main 修复。
+  # 需本地调试时：注释下面 4 行，改用 `path: ../meta-radxa-dragon`（同级本地副本）。
   meta-radxa-dragon:
     url: https://github.com/CmST0us/meta-radxa-dragon.git
     branch: scarthgap
