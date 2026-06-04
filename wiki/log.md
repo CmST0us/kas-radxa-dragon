@@ -35,3 +35,12 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
   （`git ls-remote https://github.com/CmST0us/meta-radxa-dragon.git scarthgap`）。
 - 影响页：components/layers.md, topics/versioning.md, CLAUDE.md（第五节状态备忘）。
 - 相关文件：kas-radxa-q6a.yml
+
+## [2026-06-04] change | 新增 GitHub Actions 构建工作流
+- 新增 `.github/workflows/build.yml`：手动触发（workflow_dispatch，target 可选
+  multimedia/console/minimal），ubuntu-24.04 runner，timeout 350min；先清磁盘再装
+  Yocto host 依赖 + locale + kas，`kas dump` 健康检查后 `kas build --target`，
+  上传 deploy/images 为 artifact。依赖 yml 中 `rm_work` 控制峰值磁盘。
+- 背景：本地/容器环境磁盘仅 ~38GB，全量镜像构建在编译内核时 ENOSPC 失败，改用 CI 构建。
+- 影响页：topics/build-and-dev-workflow.md（新增 CI 章节）, index.md
+- 相关文件：.github/workflows/build.yml
