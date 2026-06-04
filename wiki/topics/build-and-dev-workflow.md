@@ -54,6 +54,24 @@ DL_DIR=/home/eki/Project/carbon/qualcomm/radxa-q6a-qcom-linux/downloads \
 kas shell kas-radxa-q6a.yml -c "bitbake -g qcom-multimedia-image && grep <pkg> pn-depends.dot"
 ```
 
+## CI 构建（GitHub Actions）
+
+`.github/workflows/build.yml` 用 kas 在 GitHub 托管 runner 上构建镜像：
+
+- **触发**：手动 `workflow_dispatch`（避免每次 push 跑数小时构建）。输入 `target`
+  可选 `qcom-multimedia-image`（默认）/`qcom-console-image`/`qcom-minimal-image`，
+  `upload_images` 控制是否上传产物。
+- **runner**：`ubuntu-24.04`，`timeout-minutes: 350`（GitHub 单 job 上限 6 小时）。
+- **磁盘**：先删除 dotnet/android/CodeQL/boost 等预装大件腾出 ~65GB；配合 yml 里的
+  `INHERIT += "rm_work"`（编译完即删 workdir）控制峰值，全量镜像通常能装下。
+- **步骤**：装 Yocto host 依赖 + 生成 `en_US.UTF-8` locale → `pip --user` 装 kas →
+  `kas dump` 健康检查 → `kas build --target <input>` → 上传
+  `build/*/deploy/images/qcs6490-radxa-dragon-q6a/**` 为 artifact（保留 7 天）。
+- runner 用户为非 root（`runner`），bitbake 的 "不要以 root 运行" 检查自然通过。
+
+> 已知风险：sstate/downloads 未做跨 run 缓存（GitHub Actions 缓存上限 10GB，远小于
+> Yocto 缓存体量），故每次都是冷构建、较慢。需要加速可自建 sstate-mirror / downloads 镜像。
+
 ## 相关
 - [kas-configuration](kas-configuration.md)
 - [versioning](versioning.md)

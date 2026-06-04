@@ -1,0 +1,96 @@
+# GitHub Actions：用 kas 在 CI 里构建 Radxa Dragon Q6A 镜像
+#
+# 说明：
+#  - Yocto 全量镜像构建耗时长、占磁盘大。GitHub 托管 runner 单 job 上限 6 小时，
+#    磁盘清理后约有 ~65GB 可用；本仓库 local_conf_header 已启用 `INHERIT += "rm_work"`，
+#    每个配方编译完即删除其 workdir，峰值磁盘大幅降低，全量镜像通常能挤进去。
+#  - 仅手动触发（workflow_dispatch），避免每次 push 都跑数小时构建。
+#  - meta-radxa-dragon 当前为远端模式，CI 可直接按 url/commit 检出，无需本地副本。
+
+name: Build Radxa Q6A image
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "构建目标镜像"
+        type: choice
+        default: qcom-multimedia-image
+        options:
+          - qcom-multimedia-image
+          - qcom-console-image
+          - qcom-minimal-image
+      upload_images:
+        description: "把 deploy/images 作为 artifact 上传"
+        type: boolean
+        default: true
+
+concurrency:
+  group: kas-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - name: Free up disk space
+        run: |
+          echo "=== disk before ==="; df -h /
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /opt/ghc \
+            /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/boost \
+            "${AGENT_TOOLSDIRECTORY:-/opt/hostedtoolcache}" || true
+          sudo docker image prune --all --force || true
+          sudo apt-get clean
+          echo "=== disk after ==="; df -h /
+
+      - name: Checkout integration repo
+        uses: actions/checkout@v4
+
+      - name: Install Yocto host dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            gawk wget git diffstat unzip texinfo gcc build-essential \
+            chrpath socat cpio python3 python3-pip python3-pexpect \
+            xz-utils debianutils iputils-ping python3-git python3-jinja2 \
+            python3-subunit zstd liblz4-tool file locales libacl1
+          sudo locale-gen en_US.UTF-8
+          sudo update-locale LANG=en_US.UTF-8
+
+      - name: Install kas
+        run: |
+          python3 -m pip install --user --break-system-packages kas
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: kas dump (sanity check)
+        env:
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
+        run: kas dump kas-radxa-q6a.yml
+
+      - name: kas build
+        env:
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
+        run: kas build kas-radxa-q6a.yml --target "${{ inputs.target }}"
+
+      - name: List deploy artifacts
+        if: always()
+        run: |
+          find build -path '*/deploy/images/*' -type f 2>/dev/null | head -200 || true
+          echo "=== disk final ==="; df -h /
+
+      - name: Upload deploy images
+        if: ${{ always() && inputs.upload_images }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: qcs6490-radxa-dragon-q6a-${{ inputs.target }}
+          path: |
+            build/*/deploy/images/qcs6490-radxa-dragon-q6a/**
+          if-no-files-found: warn
+          retention-days: 7

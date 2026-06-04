@@ -10,7 +10,7 @@ _最后更新：2026-06-03_
 
 ## Topics（概念：怎么做、为什么）
 - [topics/kas-configuration](topics/kas-configuration.md) — `kas-radxa-q6a.yml` 结构详解（repos / layers / local_conf_header）
-- [topics/build-and-dev-workflow](topics/build-and-dev-workflow.md) — 构建命令、缓存复用、本地开发模式
+- [topics/build-and-dev-workflow](topics/build-and-dev-workflow.md) — 构建命令、缓存复用、本地开发模式、CI（GitHub Actions）
 - [topics/versioning](topics/versioning.md) — layer 版本锁定、lockfile、本地↔远端切换
 - [topics/distro-and-images](topics/distro-and-images.md) — `qcom-wayland` 与 `qcom-multimedia-image` 的区别与关系
 
