@@ -11,10 +11,19 @@
 #
 # 两类刷写目标：
 #   - spinor : 引导固件（XBL/EDK2 等 SPI NOR），来自固件包的 spinor 目录。
-#   - ufs    : 系统盘（HLOS 分区），来自固件包的 ufs_hlos 目录。
-#              如需刷 kas 自构建的系统镜像，用 UFS_DIR 指向 deploy/images/<machine>。
+#   - ufs    : 系统盘 = kas 自构建镜像 deploy/images/<machine>/qcom-multimedia-image，
+#              默认刷全部 LUN0-5（efi+system+全套引导固件）。该目录会自动定位，无需手填；
+#              也可用 UFS_DIR 显式指定。
 #
-# 进入 EDL 模式：断电 → 按住 EDL 按钮 → 用 USB3 线连接主机上电
+# LUN 刷写形态（实测）：把列表内所有 rawprogram<N>.xml + patch<N>.xml 在**一次** edl-ng
+#   调用里传完（先全部 rawprogram，再全部 patch）即可写完 LUN0-5（含 xbl/aop/dtb/tz/… 引导
+#   固件）——edl-ng 与 qdl 均已真机验证。逐 LUN 分开调用才会让 LUN1-5 被 NAK（曾误判为「设备
+#   只接受 LUN0」，根因实为调用形态）。只想更新 OS 时设 UFS_LUNS=0。详见 wiki/topics/flashing.md。
+#
+# 速度：本板经 USB2（480Mbps）枚举时 ~34MiB/s，system.img(~8.8GB) 约需 270s。换 USB3
+#   口/线可显著提速。MAXPAYLOAD 不影响 USB2 吞吐（瓶颈在链路）。
+#
+# 进入 EDL 模式：断电 → 按住 EDL 按钮 → 用 USB 线连接主机上电
 # （设备枚举为 "Qualcomm HS-USB QDLoader 9008"，VID:PID 05c6:9008）。
 #
 # 用法（在本仓库根目录执行）:
@@ -35,6 +44,16 @@ REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 MACHINE="${MACHINE:-qcs6490-radxa-dragon-q6a}"
 EDL_USB="05c6:9008"                            # Qualcomm HS-USB QDLoader 9008
+
+# 要刷写的 UFS physical_partition（LUN）列表。默认刷全部 LUN0-5（efi+system+全套引导固件）。
+# 形态对齐实测成功的 qdl：把列表内所有 rawprogram<N>.xml + patch<N>.xml **一次性合并**传给
+# edl-ng（而非逐 LUN 分开调用——后者在本板上对 LUN1-5 会 NAK）。只想更新 OS 时设 UFS_LUNS=0。
+UFS_LUNS="${UFS_LUNS:-0 1 2 3 4 5}"
+
+# Firehose 单包负载（字节）。注意：本板经 USB2（480Mbps）枚举时吞吐恒为 ~34MiB/s，
+# 加大此值并不会提速（USB 链路才是瓶颈，换 USB3 口/线可显著提速）。保留此旋钮仅为
+# 兼容个别 loader；默认 1MB。若某 loader 不支持大包导致 configure 失败，调小。
+MAXPAYLOAD="${MAXPAYLOAD:-1048576}"
 
 # 官方固件包与工程内缓存目录（一切外部资源下载进工程，不引用工程外路径）。
 # 只在刷固件时用到，放在 scripts/ 下（不污染仓库根）。
@@ -150,10 +169,18 @@ require_edl_mode() {
 }
 
 # ─────────────────────────── 刷写动作 ───────────────────────────
-# edl-ng --loader <loader> --memory <mem> rawprogram <rawprogram*.xml> <patch*.xml>
+# edl-ng --loader <loader> --memory <mem> rawprogram <rawprogram…> <patch…>
 # 在 <dir> 内执行，使 XML 中的相对 filename 能解析。
+# flash_rawprogram <edl> <mem> <dir> <loader> <luns>
+#   <luns> = 要刷的 physical_partition 号列表（空格分隔），如 "0" 或 "0 1 2 3 4 5"。
+#
+# 把列表内**所有** rawprogram<N>.xml + patch<N>.xml 在**一次** edl-ng 调用里传完（先列全部
+# rawprogram，再列全部 patch），而非逐 LUN 分开调用。已真机实测：合并调用下 edl-ng 与 qdl 均
+# 可一次写完 LUN0-5（含引导固件）；逐 LUN 分开调用才会让 LUN1-5 被 NAK（曾误判为「设备只接受
+# LUN0」）。根因是调用形态，与工具无关。
+# 只取标准 rawprogram<N>.xml / patch<N>.xml，绝不匹配 *_BLANK_GPT / *_WIPE_PARTITIONS（破坏性）。
 flash_rawprogram() {
-    local edl="$1" mem="$2" dir="$3" loader="$4"
+    local edl="$1" mem="$2" dir="$3" loader="$4" luns="$5"
     [ -d "$dir" ] || die "镜像目录不存在: $dir"
     [ -f "$loader" ] || die "未找到 firehose loader: $loader"
 
@@ -162,20 +189,28 @@ flash_rawprogram() {
         dir="$dir/partition_ufs"; _info "使用子目录: ${dir#$REPO_DIR/}"
     fi
 
-    local raws patches
-    raws=$(cd "$dir" && ls -1 rawprogram*.xml 2>/dev/null | sort -V || true)
-    patches=$(cd "$dir" && ls -1 patch*.xml 2>/dev/null | sort -V || true)
-    [ -n "$raws" ] || die "在 $dir 未找到 rawprogram*.xml"
+    # 收集存在的 rawprogram / patch：先全部 rawprogram，再全部 patch（对齐 qdl 成功形态）。
+    local n raws=() patches=()
+    for n in $luns; do
+        [ -e "$dir/rawprogram$n.xml" ] || { _warn "LUN $n: 无 rawprogram$n.xml，跳过"; continue; }
+        raws+=("rawprogram$n.xml")
+        [ -e "$dir/patch$n.xml" ] && patches+=("patch$n.xml")
+    done
+    [ ${#raws[@]} -gt 0 ] || die "目录内无任何 rawprogram<N>.xml: $dir"
 
-    _step "edl-ng rawprogram → $mem（loader: $(basename "$loader")）"
+    _step "edl-ng rawprogram → $mem（loader: $(basename "$loader")，LUN: $luns，payload ${MAXPAYLOAD}B）"
     _info "目录: $dir"
-    _info "rawprogram: $(echo $raws | tr '\n' ' ')"
-    _info "patch:      $(echo $patches | tr '\n' ' ')"
+    _info "rawprogram: ${raws[*]}"
+    _info "patch: ${patches[*]:-（无）}"
 
-    ( cd "$dir" && $SUDO "$edl" --loader "$loader" --memory "$mem" \
-        rawprogram $raws $patches ) \
-        || die "edl-ng rawprogram 失败"
-    _ok "$mem 刷写完成"
+    # 单次合并调用：rawprogram0 rawprogram1 … patch0 patch1 …
+    if ( cd "$dir" && $SUDO "$edl" --loader "$loader" --memory "$mem" \
+            --maxpayload "$MAXPAYLOAD" rawprogram \
+            "${raws[@]}" ${patches[@]+"${patches[@]}"} ); then
+        _ok "$mem 刷写完成（LUN: $luns）"
+    else
+        die "$mem 刷写失败（LUN: $luns）。只想刷 OS 时用 UFS_LUNS=0 重试；若 LUN1-5 仍 NAK 见 wiki/topics/flashing.md"
+    fi
 }
 
 cmd_fetch() {
@@ -192,18 +227,42 @@ cmd_spinor() {
     loader="$(locate_loader)"
     sdir="$(dirname "$loader")"        # spinor 固件与 loader 同目录
     require_edl_mode
-    flash_rawprogram "$edl" "spinor" "$sdir" "$loader"
+    # edl-ng 的 --memory 枚举为大写：NAND|NVME|SDCC|SPINOR|UFS。SPI NOR 只有单个 LUN0。
+    flash_rawprogram "$edl" "SPINOR" "$sdir" "$loader" "0"
+}
+
+# kas 自构建系统镜像目录：build/.../deploy/images/<machine>/qcom-multimedia-image
+# 该目录是自洽的整套刷写集（system.img/efi.bin/dtb.bin + rawprogram<N>.xml + 同目录 loader）。
+# 注意：deploy 根目录虽也有 rawprogram<N>.xml，却缺重命名后的 system.img/efi.bin/dtb.bin，
+# 故必须用 qcom-multimedia-image 子目录。
+locate_build_ufs_dir() {
+    local d="$REPO_DIR/build/tmp-glibc/deploy/images/$MACHINE/qcom-multimedia-image"
+    if [ -f "$d/rawprogram0.xml" ]; then echo "$d"; return; fi
+    # 退路：在 build 下搜任意 qcom-multimedia-image（machine/构建目录名有差异时）
+    find "$REPO_DIR/build" -type d -name qcom-multimedia-image \
+        -exec test -f '{}/rawprogram0.xml' ';' -print -quit 2>/dev/null
 }
 
 cmd_ufs() {
     local edl loader dir; edl="$(ensure_edl_ng)"
     _hdr "刷写系统盘 (UFS HLOS) — $MACHINE"
-    ensure_firmware
-    loader="$(locate_loader)"
-    dir="${UFS_DIR:-$(locate_ufs_dir)}"
-    [ -n "$dir" ] || die "未定位到 UFS 镜像目录；可设 UFS_DIR 指向 deploy/images/$MACHINE"
+    # 目录定位优先级：UFS_DIR 显式 → kas 自构建 qcom-multimedia-image → 固件包内 ufs_hlos
+    dir="${UFS_DIR:-}"
+    [ -n "$dir" ] || dir="$(locate_build_ufs_dir)"
+    if [ -z "$dir" ]; then ensure_firmware; dir="$(locate_ufs_dir)"; fi
+    [ -n "$dir" ] || die "未定位到 UFS 镜像目录；可设 UFS_DIR 指向 deploy/images/$MACHINE/qcom-multimedia-image"
+
+    # loader 优先用镜像目录内同版本的 prog_firehose_ddr.elf；缺失才回落到固件包。
+    if [ -f "$dir/prog_firehose_ddr.elf" ]; then
+        loader="$dir/prog_firehose_ddr.elf"
+    else
+        ensure_firmware; loader="$(locate_loader)"
+    fi
     require_edl_mode
-    flash_rawprogram "$edl" "UFS" "$dir" "$loader"
+    # 默认 UFS_LUNS="0 1 2 3 4 5"：合并一次调用刷全部 LUN（efi+system+全套引导固件）。
+    # 只想更新 OS、保留设备原引导固件时设 UFS_LUNS=0（见 flash_rawprogram 注释与
+    # wiki/topics/flashing.md）。
+    flash_rawprogram "$edl" "UFS" "$dir" "$loader" "$UFS_LUNS"
 }
 
 cmd_reset() {
