@@ -1,12 +1,15 @@
 # Index — kas-radxa-dragon wiki
 
-_最后更新：2026-06-03_
+_最后更新：2026-06-06_
 
 本知识库的内容目录。回答关于本仓库的问题时，先从这里定位页面。
 
 ## 入口
 - [overview](overview.md) — 仓库总览、架构、快速上手
 - [log](log.md) — 时间线（每次 change/decision/finding/lint）
+
+## 外部参考资料（提炼）
+- [qualcomm-linux.html](qualcomm-linux.html) — Qualcomm Linux 官方文档（Build Guide + Yocto Guide 全部子页面）深入提炼：layers / machine 配置链 / 构建路线 / 刷写 / 启动链·UKI·secure boot / 分区·OTA / 用户定制，并逐条映射到本项目 kas 做法
 
 ## Topics（概念：怎么做、为什么）
 - [topics/kas-configuration](topics/kas-configuration.md) — `kas-radxa-q6a.yml` 结构详解（repos / layers / local_conf_header）

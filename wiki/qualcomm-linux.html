@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qualcomm Linux 官方文档要点（QLI.1.5 / QCS6490）— kas-radxa-dragon wiki</title>
+<style>
+  :root{
+    --fg:#1b1f24; --muted:#57606a; --bg:#ffffff; --soft:#f6f8fa;
+    --border:#d0d7de; --accent:#0969da; --accent-soft:#ddf4ff;
+    --warn-bg:#fff8c5; --warn-bd:#d4a72c; --note-bg:#ddf4ff; --note-bd:#54aeff;
+    --tip-bg:#dafbe1; --tip-bd:#4ac26b; --code-bg:#f6f8fa;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--fg);background:var(--bg);
+    font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans CJK SC","PingFang SC","Microsoft YaHei",Helvetica,Arial,sans-serif;}
+  .wrap{display:flex;max-width:1200px;margin:0 auto;gap:28px;padding:0 20px;}
+  nav.toc{position:sticky;top:0;align-self:flex-start;height:100vh;overflow:auto;
+    width:280px;flex:0 0 280px;padding:22px 8px 60px 0;border-right:1px solid var(--border);font-size:13.5px;}
+  nav.toc h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 6px;}
+  nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:2px 8px;border-radius:6px;}
+  nav.toc a:hover{background:var(--soft);color:var(--accent);}
+  nav.toc a.lvl2{padding-left:20px;font-size:12.8px;}
+  main{flex:1 1 auto;min-width:0;padding:28px 0 120px;}
+  h1{font-size:30px;line-height:1.25;margin:.2em 0 .1em;}
+  h2{font-size:23px;margin:2em 0 .5em;padding-bottom:.25em;border-bottom:2px solid var(--border);}
+  h3{font-size:18.5px;margin:1.7em 0 .4em;}
+  h4{font-size:15.5px;margin:1.3em 0 .3em;color:var(--muted);}
+  p,li{margin:.4em 0;}
+  code{font-family:var(--mono);font-size:.86em;background:var(--code-bg);padding:.12em .35em;border-radius:5px;}
+  pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;overflow:auto;font-size:13px;line-height:1.5;}
+  pre code{background:none;padding:0;font-size:13px;}
+  a{color:var(--accent);}
+  table{border-collapse:collapse;width:100%;margin:1em 0;font-size:14px;display:block;overflow-x:auto;}
+  th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top;}
+  th{background:var(--soft);font-weight:600;}
+  tr:nth-child(even) td{background:#fbfcfd;}
+  .callout{border:1px solid;border-left-width:5px;border-radius:8px;padding:10px 16px;margin:1.1em 0;font-size:14.5px;}
+  .callout p{margin:.35em 0;}
+  .callout .lbl{font-weight:700;display:block;margin-bottom:.2em;}
+  .note{background:var(--note-bg);border-color:var(--note-bd);}
+  .warn{background:var(--warn-bg);border-color:var(--warn-bd);}
+  .tip{background:var(--tip-bg);border-color:var(--tip-bd);}
+  .meta{color:var(--muted);font-size:13.5px;font-style:italic;}
+  .src{color:var(--muted);font-size:12.5px;}
+  .src a{font-size:12.5px;}
+  .pill{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:20px;padding:1px 10px;font-size:12px;font-weight:600;margin-right:4px;}
+  hr{border:none;border-top:1px solid var(--border);margin:2.4em 0;}
+  .anchor{scroll-margin-top:14px;}
+  ul.tight{margin:.3em 0;}
+  kbd{font-family:var(--mono);font-size:.82em;border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;padding:.05em .4em;background:#fff;}
+  footer{color:var(--muted);font-size:13px;border-top:1px solid var(--border);margin-top:40px;padding-top:16px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav class="toc">
+  <h2>导航</h2>
+  <a href="#intro">0 · 导言与使用须知</a>
+  <a href="#baseline">1 · 版本基线与架构</a>
+  <a href="#layers">2 · metadata layers</a>
+  <a href="#hwe" >3 · meta-qcom-hwe（machine）</a>
+  <a href="#hwe-chain" class="lvl2">3.1 配置三层链</a>
+  <a href="#hwe-soc" class="lvl2">3.2 SoC 层与 cmdline</a>
+  <a href="#hwe-kernel" class="lvl2">3.3 双内核与固件</a>
+  <a href="#hwe-class" class="lvl2">3.4 自定义 bbclass</a>
+  <a href="#distro">4 · meta-qcom-distro（distro/镜像）</a>
+  <a href="#optional">5 · 可选层</a>
+  <a href="#build">6 · 构建路线</a>
+  <a href="#build-manifest" class="lvl2">6.1 manifest 标签</a>
+  <a href="#build-github" class="lvl2">6.2 源码/GitHub 路线</a>
+  <a href="#build-fw" class="lvl2">6.3 固件与 extras</a>
+  <a href="#build-docker" class="lvl2">6.4 Docker 构建</a>
+  <a href="#custom">7 · 用户定制（→ kas）</a>
+  <a href="#flash">8 · 刷写（EDL/qdl）</a>
+  <a href="#partitions">9 · 分区与 LUN 布局</a>
+  <a href="#boot">10 · 启动链 / UKI / Secure Boot</a>
+  <a href="#ota">11 · OTA（Capsule + OSTree）</a>
+  <a href="#sysmisc">12 · init / VM / SD / efivar / Docker</a>
+  <a href="#trouble">13 · 排错速查</a>
+  <a href="#mapping">14 · 对本项目的映射</a>
+  <a href="#sources">15 · 来源 URL 清单</a>
+  <h2>相关 wiki 页</h2>
+  <a href="index.md">index.md</a>
+  <a href="components/layers.md">components/layers</a>
+  <a href="components/machine-qcs6490-radxa-dragon-q6a.md">machine 页</a>
+  <a href="topics/distro-and-images.md">distro-and-images</a>
+  <a href="topics/flashing.md">flashing</a>
+  <a href="topics/versioning.md">versioning</a>
+</nav>
+
+<main>
+
+<h1 id="intro" class="anchor">Qualcomm Linux 官方文档要点</h1>
+<p class="meta">面向 kas-radxa-dragon 项目（Radxa Dragon Q6A / QCS6490，基线 Qualcomm Linux QLI.1.5-Ver.1.1，scarthgap）整理 ·
+最后更新：2026-06-06</p>
+
+<p>本页是对 Qualcomm Linux 官方文档两大入口
+<a href="https://docs.qualcomm.com/doc/80-70020-254Y/topic/build_landing_page.html">Build Guide（编译指南）</a>
+与 <a href="https://docs.qualcomm.com/doc/80-70020-27SC/topic/yocto_landing_page.html">Yocto Guide（Yocto 指南）</a>
+及其全部子页面的深入提炼，结论已与 <code>qualcomm-linux/*</code> 的 GitHub 仓库源码交叉核实。
+目的：在用 kas 维护本项目时，随手查到「官方是怎么定义/构建/刷写的」，以及「本项目的 kas 等价做法」。</p>
+
+<div class="callout warn">
+  <span class="lbl">⚠ 两条硬性使用须知</span>
+  <p><b>① 抓取/查阅方式</b>：<code>docs.qualcomm.com/bundle/publicresource/topics/&lt;id&gt;/&lt;page&gt;.html</code>
+  是 JavaScript 动态渲染的壳，机器抓取只得空白。要拿正文，请改用静态形式
+  <code>docs.qualcomm.com/doc/&lt;docID&gt;/topic/&lt;page&gt;.html</code>。各 docID 见
+  <a href="#sources">第 15 节</a>。</p>
+  <p><b>② 版本漂移</b>：docs.qualcomm.com 默认展示<b>较新</b>的 QLI 版本（部分页面已是 QLI 2.0：内核 6.18、纯 kas、
+  <code>meta-qcom-releases</code>），与本项目的 <b>QLI.1.5（内核 6.6.90）</b> 不同。
+  本页所有事实均已对齐 <b>scarthgap / QLI.1.5</b>；遇到 <code>build_landing_page</code> 之类指向 QLI 2.0 的内容已剔除。
+  写配置前永远以本仓库 <code>kas-radxa-q6a.yml</code> 与检出的 layer 源码为准。</p>
+</div>
+
+<div class="callout note">
+  <span class="lbl">真值来源（source of truth）</span>
+  <p>官方文档是「人类可读说明」，而 <b>检出到 <code>layers/</code> 的 layer 源码</b>（machine conf、recipe、bbclass）
+  才是事实。本页写到的 commit/分支/变量名，落地前请到对应文件复核。相关锁定版本见
+  <a href="components/layers.md">components/layers.md</a>。</p>
+</div>
+
+<hr>
+
+<h2 id="baseline" class="anchor">1 · 版本基线与整体架构</h2>
+
+<p>Qualcomm Linux 是高通基于 <b>Yocto Project 5.0 LTS（scarthgap）</b> 的参考嵌入式 Linux 发行版栈。
+本项目锁定的基线（与 <code>CLAUDE.md</code>、<code>kas-radxa-q6a.yml</code> 一致）：</p>
+
+<table>
+<thead><tr><th>维度</th><th>取值</th></tr></thead>
+<tbody>
+<tr><td>QLI 版本</td><td><b>QLI.1.5-Ver.1.1</b></td></tr>
+<tr><td>Yocto 分支</td><td><code>scarthgap</code>（别名 <code>qcom-linux-scarthgap</code>）</td></tr>
+<tr><td>内核</td><td><b>6.6.90</b>（custom：CodeLinaro <code>kernel.qclinux.1.0.r1-rel</code>；base：上游 <code>linux-6.6.y</code>）</td></tr>
+<tr><td>Manifest 仓库</td><td><code>github.com/quic-yocto/qcom-manifest</code>（== <code>qualcomm-linux/qcom-manifest</code>），分支 <code>qcom-linux-scarthgap</code></td></tr>
+<tr><td>本项目 manifest</td><td><code>qcom-6.6.90-QLI.1.5-Ver.1.1_qim-product-sdk-2.0.1.xml</code></td></tr>
+<tr><td>DISTRO</td><td><code>qcom-wayland</code></td></tr>
+<tr><td>默认镜像</td><td><code>qcom-multimedia-image</code></td></tr>
+<tr><td>SoC / SOC_FAMILY</td><td>QCS6490 / <code>qcm6490</code>（注意族名是 qcm，非 qcs）</td></tr>
+<tr><td>MACHINE</td><td>本项目 <code>qcs6490-radxa-dragon-q6a</code>（官方参考板 <code>qcs6490-rb3gen2-core-kit</code> 等）</td></tr>
+</tbody>
+</table>
+
+<div class="callout tip">
+  <span class="lbl">两种 BSP 变体 —— 全栈贯穿的核心开关</span>
+  <p>变量 <code>QCOM_SELECTED_BSP</code> 选择 BSP 变体，影响内核 recipe、图形栈、DTBO 等：</p>
+  <ul class="tight">
+    <li><span class="pill">custom</span>（默认）含高通增值/优化闭源件：<b>Adreno GPU</b>、custom 6.6 内核、DSP、<b>DTBO 支持</b>、WLAN qcacld 等。</li>
+    <li><span class="pill">base</span>尽量用纯上游：<b>Mesa</b> 图形、上游 stable 内核；仅少量尚在 upstreaming 的高通件例外。</li>
+  </ul>
+  <p>kas 等价：在 <code>local_conf_header</code> 设 <code>QCOM_SELECTED_BSP</code>，或固化在 machine inc 中，免去 <code>setup-environment</code>。</p>
+</div>
+
+<hr>
+
+<h2 id="layers" class="anchor">2 · Yocto metadata layers</h2>
+<p class="meta">详见 <a href="components/layers.md">components/layers.md</a>（含本项目实际锁定 commit）。</p>
+
+<p>依赖叠放顺序（自底向上）：</p>
+<pre><code>poky/meta (scarthgap)
+└─ 社区层：meta-openembedded · meta-virtualization · meta-selinux · meta-security · meta-updater(OSTree OTA)
+   └─ Qualcomm 核心（必需）：meta-qcom → meta-qcom-hwe → meta-qcom-distro
+      └─ Qualcomm 可选：meta-qcom-realtime · meta-qcom-extras · meta-qcom-qim-product-sdk</code></pre>
+
+<table>
+<thead><tr><th>Layer</th><th>状态</th><th>用途</th><th>仓库 / 分支</th></tr></thead>
+<tbody>
+<tr><td><code>meta-qcom</code></td><td>必需</td><td>设备支持 + 上游 OSS 组件（上游 BSP 层）</td><td>git.yoctoproject.org（镜像 <code>qualcomm-linux/meta-qcom</code>）/ master(+scarthgap)</td></tr>
+<tr><td><code>meta-qcom-hwe</code></td><td>必需</td><td>硬件使能：各套件 machine conf、内核、固件、DTB/DTBO</td><td><code>qualcomm-linux/meta-qcom-hwe</code> / scarthgap</td></tr>
+<tr><td><code>meta-qcom-distro</code></td><td>必需</td><td>参考发行版 <code>qcom-wayland</code> + 镜像配方 + packagegroup</td><td><code>qualcomm-linux/meta-qcom-distro</code> / scarthgap</td></tr>
+<tr><td><code>meta-qcom-realtime</code></td><td>可选</td><td>PREEMPT_RT 实时内核</td><td><code>qualcomm-linux/meta-qcom-realtime</code> / scarthgap</td></tr>
+<tr><td><code>meta-qcom-extras</code></td><td>可选</td><td>面向<b>注册用户</b>的「部分组件源码编译」（受访问限制）</td><td>受限仓库（见下）</td></tr>
+<tr><td><code>meta-qcom-qim-product-sdk</code></td><td>可选</td><td>多媒体/AI SDK（GStreamer + QNN/SNPE/LiteRT）</td><td><code>qualcomm-linux/meta-qcom-qim-product-sdk</code> / scarthgap</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+  <span class="lbl">⚠ <code>meta-qcom-extras</code> 同名歧义</span>
+  <p>QLI 语境的 <code>meta-qcom-extras</code> = 给<b>注册用户</b>启用「部分组件源码编译」的可选层，仓库受限（公开 GitHub 路径 404），
+  须走高通注册渠道获取，<b>无法从公开 URL 锁 commit</b>。它与社区老层 <code>github.com/linux-msm/meta-qcom-extras</code>（"Extra recipes for meta-qcom"）
+  <b>不是同一物</b>，别拿后者配 QLI 构建。本项目若不需源码编译受限件，可不引入。</p>
+</div>
+
+<hr>
+
+<h2 id="hwe" class="anchor">3 · meta-qcom-hwe —— machine 配置层级（QCS6490 核心）</h2>
+<p class="meta">本项目最相关一节。详见 <a href="components/machine-qcs6490-radxa-dragon-q6a.md">machine 组件页</a>。</p>
+
+<h3 id="hwe-chain" class="anchor">3.1 配置三层 require 链</h3>
+<p>一台机器的配置由三层 <code>require</code> 串成，<b>板级 conf 只需 require SoC inc</b>：</p>
+<pre><code>arch/arch-armv8-2a.inc                 # ARM 架构 tune
+  └─ qcom-base.inc                      # 跨机器通用：BSP 选择、provider、fstype、固件、引导
+      └─ qcom-qcs6490.inc               # SoC 层：SOC_FAMILY、KERNEL_CMDLINE、SoC 包组
+          └─ qcs6490-&lt;board&gt;.conf       # 板级：KERNEL_DEVICETREE、MACHINE_FEATURES
+</code></pre>
+
+<div class="callout note">
+  <span class="lbl">命名差异：<code>qcom-base.inc</code> vs <code>qcom-armv8a.conf</code></span>
+  <p>官方「自定义 machine」文档把通用层写作 <code>qcom-armv8a.conf</code>（那是 <b>upstream meta-qcom</b>（yoctoproject）的老路径，
+  含 DragonBoard/RB5 设备树）。但 <b>QLI 产品线的 meta-qcom-hwe（scarthgap）实际源码</b>里通用层是 <code>qcom-base.inc</code>。
+  无论文档怎么称呼，<b>稳定可照搬的指令是「板级 conf <code>require conf/machine/include/qcom-qcs6490.inc</code>」</b>。
+  <code>meta-radxa-dragon</code> 的 <code>qcs6490-radxa-dragon-q6a</code> 即仿此层级、复用 <code>qcom-qcs6490.inc</code>。</p>
+</div>
+
+<h4>qcom-base.inc 的关键机制</h4>
+<ul class="tight">
+<li><code>QCOM_SELECTED_BSP ?= "custom"</code> → 驱动 <code>MACHINEOVERRIDES =. "qcom-${QCOM_SELECTED_BSP}-bsp:"</code></li>
+<li><code>SOC_FAMILY</code> 加 <code>qcom:</code> 前缀，去连字符派生 <code>SOC_ARCH</code>，按需进 <code>PACKAGE_EXTRA_ARCHS</code></li>
+<li>图形 provider：custom=<code>qcom-adreno</code>，base=<code>mesa</code>（virtual/egl、virtual/libgles…）</li>
+<li>内核 provider：<code>PREFERRED_PROVIDER_virtual/kernel</code> custom=<code>linux-qcom-custom</code>，base=<code>linux-qcom-base</code></li>
+<li><code>IMAGE_FSTYPES</code> 限 <b>ext4</b>（4096B 块对齐），mask 掉 <code>tar.gz</code>；OTA 镜像走 OSTree</li>
+<li>引导/固件：<code>firmware-qcom-bootbins</code> + <code>firmware-qcom-partconf</code>；bootimg ARM64 基址 <code>0x80000000</code>、4KB page</li>
+<li>控制台 <code>115200 ttyMSM0</code>；EFI 用 <b>systemd-boot + UKI</b>（<code>/EFI/Linux</code>）</li>
+</ul>
+
+<h3 id="hwe-soc" class="anchor">3.2 qcom-qcs6490.inc（SoC 层，QCS6490 专属）</h3>
+<ul class="tight">
+<li><code>DEFAULTTUNE = "armv8-2a-crypto"</code></li>
+<li><code>SOC_FAMILY = "qcm6490"</code></li>
+<li><code>KERNEL_CMDLINE_EXTRA</code> 含 <code>pcie_pme=nomsi</code>、<code>kernel.sched_pelt_multiplier=4</code>、
+  <code>rcupdate.rcu_expedited=1</code>、<code>rcu_nocbs=0-7</code> 等；调试构建经 <code>DBG_CMDLINE</code> 追加
+  <code>earlycon</code>、<code>page_owner</code>、<code>qcom_scm.download_mode</code>（即 <code>DEBUG_BUILD=1</code> 才有 earlycon）</li>
+<li>依赖固件包组 <code>packagegroup-firmware-qcm6490</code></li>
+<li>custom 专属 RDEPENDS：WLAN 内核模块（qcacld / qca6490）、sensor 包、子系统 ramdump 工具、secure-DSP 示例、
+  remote-debug-agent、fastrpc、modemmanager、networkmanager、pd-mapper</li>
+</ul>
+
+<div class="callout tip">
+  <span class="lbl">改内核 cmdline 的位置</span>
+  <p>要改内核命令行，编辑 <code>meta-qcom-hwe/conf/machine/include/qcom-&lt;SoC&gt;.inc</code> 里的
+  <code>KERNEL_CMDLINE_EXTRA</code>。本项目 bring-up 期间就是在 kas <code>local_conf_header</code> 临时追加
+  <code>earlycon</code> 等以提升早期可见性（见 <a href="topics/flashing.md">flashing</a> 与 log.md）。</p>
+</div>
+
+<h4>QCS6490 官方板级 conf（meta-qcom-hwe/conf/machine/）</h4>
+<p>QLI.1.5 提供四个 QCS6490 套件：<code>qcm6490-idp.conf</code>、<code>qcs6490-rb3gen2-core-kit.conf</code>、
+<code>qcs6490-rb3gen2-vision-kit.conf</code>、<code>qcs6490-rb3gen2-industrial-kit.conf</code>。
+以 core-kit 为例：</p>
+<ul class="tight">
+<li><code>require conf/machine/include/qcom-qcs6490.inc</code></li>
+<li><code>MACHINE_FEATURES = "usbhost usbgadget alsa wifi bluetooth"</code></li>
+<li><code>KERNEL_DEVICETREE</code>：base 用上游 <code>qcom/qcs6490-rb3gen2.dtb</code>；custom 用带 addon 后缀的 DTB（FP1/FP2/FP2.5/FP3 + HSP 变体）</li>
+<li>DTBO 经 <code>KERNEL_TECH_DTBOS</code> 指定，provider 为 <code>qcom-graphicsdevicetree</code>、<code>qcom-videodtb</code>、
+  <code>cameradtb</code>、<code>wlan-devicetree</code> —— <b>DTBO 仅 custom 变体支持</b></li>
+</ul>
+
+<h3 id="hwe-kernel" class="anchor">3.3 双内核与三类固件</h3>
+<h4>双内核 recipe</h4>
+<table>
+<thead><tr><th>recipe</th><th>源</th><th>分支</th><th>config</th></tr></thead>
+<tbody>
+<tr><td><code>linux-qcom-custom_6.6.bb</code></td><td><code>git.codelinaro.org/clo/la/kernel/qcom.git</code></td><td><code>kernel.qclinux.1.0.r1-rel</code></td><td><code>qcom_defconfig</code> + <code>qcom_addons.config</code>（+<code>qcom_debug.config</code> 当 <code>DEBUG_BUILD=1</code>，+<code>selinux.cfg</code>）</td></tr>
+<tr><td><code>linux-qcom-base_6.6.bb</code></td><td>kernel.org stable</td><td><code>linux-6.6.y</code></td><td>上游 defconfig + 高通补丁</td></tr>
+</tbody>
+</table>
+
+<h4>三类固件</h4>
+<ul class="tight">
+<li><code>firmware-qcom-bootbins</code>：SoC 引导二进制（如 <code>QCM6490_bootbinaries.zip</code>）</li>
+<li><code>firmware-qcom-hlosfw</code>：aDSP/cDSP/modem/WLAN，装入 rootfs</li>
+<li><code>firmware-qcom-dspso</code>：用户态 DSP 库（<code>QCM6490_dspso.zip</code>）</li>
+</ul>
+<p>经 <code>packagegroup-firmware-qcm6490</code> 加进 <code>MACHINE_EXTRA_RDEPENDS</code> 自动纳入。</p>
+
+<h3 id="hwe-class" class="anchor">3.4 自定义 bbclass</h3>
+<ul class="tight">
+<li><code>qprebuilt.bbclass</code> — 解包预编译 <code>tar.gz</code></li>
+<li><code>qmodule.bbclass</code> — <code>CONFIG_MODULE_SIG_FORCE</code> 时强制内核模块签名</li>
+<li><code>image_types_ota_sdboot.bbclass</code> — OSTree OTA / SD 启动镜像类型</li>
+</ul>
+
+<hr>
+
+<h2 id="distro" class="anchor">4 · meta-qcom-distro —— 发行版与镜像</h2>
+<p class="meta">详见 <a href="topics/distro-and-images.md">topics/distro-and-images.md</a>。</p>
+
+<p>定义发行版 <code>qcom-wayland</code>：</p>
+<ul class="tight">
+<li>基础 <code>DISTRO_FEATURES = "pam overlayfs acl xattr selinux ptest security virtualization tpm usrmerge sota"</code>；
+  <code>qcom-wayland</code> 追加 <code>wayland vulkan opengl</code></li>
+<li><code>INIT_MANAGER = systemd</code>，<code>DEV_MANAGER = udev</code></li>
+</ul>
+
+<p>镜像配方：</p>
+<table>
+<thead><tr><th>镜像</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td><code>qcom-minimal-image</code></td><td>最小 rootfs + shell + adb</td></tr>
+<tr><td><code>qcom-console-image</code></td><td>minimal + 包管理 + SSH（无图形；二级 VM host 也用它）</td></tr>
+<tr><td><code>qcom-multimedia-image</code></td><td><b>本项目默认目标</b>，需 wayland 特性，含多媒体栈</td></tr>
+<tr><td>其它</td><td><code>qcom-multimedia-test-image</code>、<code>qcom-multimedia-crossesdk-image</code>、<code>qcom-guestvm-image</code></td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<h2 id="optional" class="anchor">5 · 可选层细节</h2>
+
+<h4>meta-qcom-realtime</h4>
+<ul class="tight">
+<li>提供 <code>linux-kernel-qcom-rt</code>（上游 PREEMPT_RT 补丁，<code>CONFIG_PREEMPT_RT=y</code>）</li>
+<li>经 <code>EXTRALAYERS="meta-qcom-realtime"</code> 注入；明确支持 <code>MACHINE=qcs6490-rb3gen2-core-kit DISTRO=qcom-wayland</code></li>
+<li>tag 形如 <code>qcom-6.6.x-QLI.1.x-Ver.1.1_realtime-linux-1.1</code></li>
+</ul>
+
+<h4>meta-qcom-qim-product-sdk</h4>
+<ul class="tight">
+<li>Qualcomm Intelligent Multimedia SDK：GStreamer 优化插件 + AI/ML（<b>SNPE / QNN(AI Engine Direct) / LiteRT(TFLite)</b>）+ 示例 + 独立 SDK 工具链</li>
+<li>经 <code>EXTRALAYERS="meta-qcom-qim-product-sdk"</code> 注入；在 RB3Gen2-Vision-Kit + qcom-wayland 上验证</li>
+<li>分支 <code>qcom-linux-scarthgap</code>；本项目 manifest 即对应 <code>qim-product-sdk-2.0.1</code></li>
+</ul>
+
+<hr>
+
+<h2 id="build" class="anchor">6 · 构建路线</h2>
+<p class="meta">详见 <a href="topics/build-and-dev-workflow.md">topics/build-and-dev-workflow.md</a>。</p>
+
+<p>官方提供四条路线：① <b>QSC Launcher</b>（GUI）② <b>QSC CLI</b> ③ <b>GitHub 未注册用户</b>（用预编译固件）
+④ <b>GitHub 注册用户</b>（可选固件源码）。
+<b>本项目用 kas，等价于「GitHub / 源码 + bitbake」路线</b>：kas 用 <code>kas-radxa-q6a.yml</code> 替代
+<code>repo</code> manifest + <code>setup-environment</code>。QSC 路线本项目不用，仅作对照（QSC 底层仍是 Yocto/BitBake）。</p>
+
+<h3 id="build-manifest" class="anchor">6.1 Manifest 标签（repo <code>-m</code>）</h3>
+<table>
+<thead><tr><th>用途</th><th>manifest XML</th></tr></thead>
+<tbody>
+<tr><td>BSP（HLOS + 预编译固件）</td><td><code>qcom-6.6.90-QLI.1.5-Ver.1.1.xml</code></td></tr>
+<tr><td><b>IM SDK（本项目基线）</b></td><td><code>qcom-6.6.90-QLI.1.5-Ver.1.1_qim-product-sdk-2.0.1.xml</code></td></tr>
+<tr><td>Real-time Linux</td><td><code>qcom-6.6.90-QLI.1.5-Ver.1.1_realtime-linux-1.1.xml</code></td></tr>
+<tr><td>QIR Robotics SDK</td><td><code>qcom-6.6.90-QLI.1.5-Ver.1.1_robotics-product-sdk-1.1.xml</code></td></tr>
+</tbody>
+</table>
+
+<h3 id="build-github" class="anchor">6.2 源码 / GitHub 路线（与 kas 等价）</h3>
+<pre><code># 同步
+repo init -u https://github.com/quic-yocto/qcom-manifest -b qcom-linux-scarthgap -m &lt;manifest tag&gt;
+repo sync
+
+# 环境 + 编译（BSP / Real-time / IM SDK）
+MACHINE=&lt;machine&gt; DISTRO=qcom-wayland QCOM_SELECTED_BSP=&lt;custom|base&gt; source setup-environment
+bitbake qcom-multimedia-image          # IM SDK 则 bitbake qcom-qim-product-sdk
+
+# 产物
+build-qcom-wayland/tmp-glibc/deploy/images/&lt;machine&gt;/qcom-multimedia-image/system.img</code></pre>
+<p>注册用户鉴权：<code>~/.netrc</code> 加 <code>chipmaster2.qti.qualcomm.com</code> 与 <code>qpm-git.qualcomm.com</code> 凭据，
+token 经 <code>qsc-cli show-access-token</code>。未注册用户路线不需 netrc/token，靠公开预编译固件，编译命令一致。</p>
+
+<h3 id="build-fw" class="anchor">6.3 固件源码与 extras（注册用户）</h3>
+<p>固件以源码提供时，<code>git clone</code> 自 <code>qpm-git.qualcomm.com/.../qualcomm-linux-spf-*</code>（如
+<code>...-qimpsdk.git</code>），<code>meta-qcom-extras</code> 取自 <code>...hlos_oem_metadata.git</code>；
+运行 <code>python build.py --imf</code> 生成 QCM6490 固件 zip：</p>
+<ul class="tight">
+<li><code>QCM6490_bootbinaries.zip</code>（引导固件）· <code>QCM6490_dspso.zip</code>（DSP）· <code>QCM6490_fw.zip</code>（固件分割）</li>
+</ul>
+<p>关键环境变量：<code>EXTRALAYERS</code>、<code>CUST_ID</code>（no-modem 用 <code>213195</code>）、<code>FWZIP_PATH</code>、
+<code>HEXAGON_ROOT</code>、<code>LLVM</code>（需 14.0.4 与 16.0.7）、<code>QCOM_SELECTED_BSP=custom</code>。</p>
+<div class="callout note"><span class="lbl">与本项目刷写的关系</span>
+  <p>这三个 zip 正是 <a href="#flash">第 8 节</a> EDL 刷写消费的引导固件/DSP/固件产物；未注册用户直接用预编译包。
+  本项目 <code>edl-ng</code> 单次合并写全 LUN0–5 即覆盖这套固件分区。</p>
+</div>
+
+<h3 id="build-docker" class="anchor">6.4 Docker 构建（隔离环境）</h3>
+<pre><code>bash docker/docker_build.sh -f ./docker/dockerfiles/Dockerfile_22.04 -t qcom-6.6.90-qli.1.5-ver.1.1_22.04
+bash docker/docker_run.sh   -t qcom-6.6.90-qli.1.5-ver.1.1_22.04 -r qcom-6.6.90-QLI.1.5-Ver.1.1</code></pre>
+<p>基于 Ubuntu 22.04。本项目用 <code>kas-container</code> 达到同等隔离。</p>
+
+<hr>
+
+<h2 id="custom" class="anchor">7 · 用户定制 → kas 映射</h2>
+<p class="meta">本项目把这些都落进 <code>meta-radxa-dragon</code> 的 machine/distro 文件或 kas <code>local_conf_header</code>。</p>
+
+<h4>7.1 自定义 machine conf</h4>
+<pre><code># layers/meta-qcom-hwe/conf/machine/&lt;board&gt;.conf
+#@TYPE: Machine
+#@NAME: TestBoard
+#@DESCRIPTION: ... based on Qualcomm QCS6490
+require conf/machine/include/qcom-qcs6490.inc
+# 改 KERNEL_CMDLINE_EXTRA 在 qcom-qcs6490.inc；需要时把 meta-qcom-extras 加进 bblayers 的 EXTRALAYERS</code></pre>
+
+<h4>7.2 自定义 distro conf</h4>
+<pre><code># layers/meta-qcom-distro/conf/distro/&lt;name&gt;.conf —— 复制 qcom-wayland.conf 为模板
+DISTRO_NAME = "..."
+DISTROOVERRIDES = "test-dist"
+DISTRO_FEATURES:append = " cramfs"       # 用 :append 避免顺序问题
+# 验证：bitbake -e | grep '^DISTRO_FEATURES='</code></pre>
+
+<h4>7.3 自定义 image recipe</h4>
+<p>官方该专页未公开取到正文；标准 Yocto 做法：新建 <code>recipes-core/images/&lt;img&gt;.bb</code>，
+<code>require qcom-multimedia-image.bb</code> 或 <code>inherit core-image</code>，
+<code>IMAGE_INSTALL:append = " pkg1 pkg2"</code>；新 layer 用 <code>bitbake-layers create-layer</code> 后加入 <code>bblayers.conf</code>。
+落地前建议读检出的 <code>meta-qcom-distro</code> 源码核实确切基础镜像名。</p>
+
+<div class="callout tip"><span class="lbl">kas 等价</span>
+  <p>上述 <code>QCOM_SELECTED_BSP</code>、<code>DISTRO_FEATURES:append</code>、<code>IMAGE_INSTALL:append</code>
+  都可写进 kas 的 <code>local_conf_header</code>，machine/distro 文件则放进 <code>meta-radxa-dragon</code>，
+  从而完全不依赖 <code>setup-environment</code>。见 <a href="topics/kas-configuration.md">kas-configuration</a>。</p>
+</div>
+
+<hr>
+
+<h2 id="flash" class="anchor">8 · 刷写（EDL / qdl / firehose）</h2>
+<p class="meta">本项目用 <code>edl-ng</code>（<code>scripts/flash-edl.sh</code>），详见 <a href="topics/flashing.md">topics/flashing.md</a>。</p>
+
+<h4>工具栈</h4>
+<ul class="tight">
+<li><b>QDL</b>（Qualcomm Device Loader）：官方主用，先上传 firehose flash loader 再写镜像</li>
+<li><b>PCAT</b>：provisioning 工具，<code>-PLUGIN SD</code> 做 UFS provision / 刷 CDT（需 QSC CLI + QUD）</li>
+<li>第三方等价物（同说 firehose 协议）：<code>edl</code>(bkerler)、<code>qdl-rs</code>、<b><code>edl-ng</code>（本项目）</b></li>
+</ul>
+
+<h4>进入 EDL（9008）模式</h4>
+<ul class="tight">
+<li>UART：<code>reboot edl</code> ·  ADB：<code>adb shell reboot edl</code> · 手动：长按 <kbd>F_DL</kbd></li>
+<li>验证：<code>lsusb</code> 出现 <code>ID 05c6:9008 Qualcomm, Inc. ... (QDL mode)</code></li>
+<li>主机 udev：<code>/etc/udev/rules.d/51-qcom-usb.rules</code> 给 <code>05c6:9008</code> 设 <code>MODE="0666" GROUP="plugdev"</code></li>
+</ul>
+
+<h4>firehose 三件套与命令</h4>
+<table>
+<thead><tr><th>文件</th><th>作用</th></tr></thead>
+<tbody>
+<tr><td><code>prog_firehose_ddr.elf</code></td><td>firehose flash loader（先上传，后续都靠它写）</td></tr>
+<tr><td><code>rawprogram*.xml</code></td><td>「哪个镜像 → 哪个分区/LUN/起始扇区」</td></tr>
+<tr><td><code>patch*.xml</code></td><td>GPT 表回填/补丁（写 backup GPT、修正 last_lba）</td></tr>
+<tr><td><code>gpt_main*.bin</code> / <code>gpt_backup*.bin</code></td><td>主/备 GPT 镜像，由 Ptool / <code>gen_partition.py</code> 从 <code>partitions.conf</code> 生成</td></tr>
+</tbody>
+</table>
+<pre><code># 标准刷写
+qdl prog_firehose_ddr.elf rawprogram*.xml patch*.xml
+# UFS provision（一次性）
+qdl --storage ufs prog_firehose_ddr.elf &lt;Provision file&gt;
+# 成功标志：终端打印 "partition 1 is now bootable"
+# 反向 dump GPT 并生成 rawprogram：edl --genxml</code></pre>
+
+<p>官方刷写顺序：① 更新 udev ② 进 EDL ③ <b>Provision UFS</b>（一次性，分 LUN）④ 刷 <b>CDT</b>（如 <code>CORE_KIT_CDT.bin</code>）⑤ qdl/PCAT 刷镜像。</p>
+
+<div class="callout tip"><span class="lbl">写全引导固件 = 覆盖 boot LUN</span>
+  <p>要写全引导固件须覆盖含 boot 的 LUN（UFS：LUN1=Boot A、LUN2=Boot B 的 <code>xbl_a/b</code>、<code>xbl_config_a/b</code>，
+  以及含 <code>aop</code> 的 LUN4）。这与仓库 commit <code>b4404b6</code>「edl-ng 单次合并写全 LUN0–5（含引导固件）」一致。</p>
+</div>
+
+<hr>
+
+<h2 id="partitions" class="anchor">9 · 分区与 LUN 布局</h2>
+<p>分区为 <b>GPT</b>，<b>A/B 双槽</b>，由 Ptool 从 <code>partitions.conf</code> 生成。UFS 分 LUN：</p>
+<table>
+<thead><tr><th>LUN</th><th>用途</th><th>代表分区 / 镜像</th></tr></thead>
+<tbody>
+<tr><td>LUN0</td><td>元数据 / EFI</td><td><code>ssd</code>（8KB）；部分布局把 <code>efi</code>(vfat, type-guid <code>C12A7328-…</code>, ~512MB) 放此</td></tr>
+<tr><td><b>LUN1</b></td><td><b>Boot A（引导固件）</b></td><td><code>xbl_a</code>(3604KB ← xbl.elf)、<code>xbl_config_a</code>(512KB)</td></tr>
+<tr><td><b>LUN2</b></td><td><b>Boot B（备份）</b></td><td><code>xbl_b</code>、<code>xbl_config_b</code>（GUID 不同于 A 槽）</td></tr>
+<tr><td>LUN4</td><td>固件</td><td><code>aop_a</code>(512KB ← aop.mbn)</td></tr>
+<tr><td>其余</td><td>OS</td><td><code>rootfs/system</code>(system.img)、<code>persist</code> 等</td></tr>
+</tbody>
+</table>
+<p><b>eMMC</b> 对比：引导固件集中在 LUN0，主分区表只定义一次。改分区表 → 改 <code>partitions.conf</code> 后重生成 GPT。</p>
+
+<h4>Persist 分区</h4>
+<ul class="tight">
+<li>存<b>跨重启与 OTA 不变</b>的 BSP 数据（DRM、传感器寄存器、WiFi/BT/Camera 校准）</li>
+<li>挂载点 <code>/var/persist</code>（ext4），由 systemd <code>var-persist.mount</code> 挂 <code>/dev/disk/by-partlabel/persist</code></li>
+<li><code>resize-partition@persist.service</code>（recipe <code>qcom-resize-partitions.bb</code>）启动时扩容到最大可用</li>
+<li>删单文件，别整盘 wipe；验证 <code>mount | grep persist</code></li>
+</ul>
+
+<hr>
+
+<h2 id="boot" class="anchor">10 · 启动链 / systemd-boot+UKI / Secure Boot</h2>
+
+<h4>完整启动链</h4>
+<pre><code>PBL(bootROM) → XBL_SEC(EL3) → XBL_Loader(DDR 训练)
+  → TZ/QTEE(EL3) + QHEE/Hypervisor(EL2)
+  → UEFI/EDK2 + ABL(EL1) → systemd-boot → Kernel/UKI(EL1)</code></pre>
+<p>OS 段：UEFI 挂 EFI 分区里的 <code>efi.bin</code>(VFAT) → 执行 <code>bootaa64.efi</code>(systemd-boot) → 解析 <code>loader.conf</code> → 加载内核。</p>
+
+<h4>EFI 分区（<code>efi.bin</code>，VFAT）内容</h4>
+<ul class="tight">
+<li><code>bootaa64.efi</code>（systemd-boot 管理器）· <code>/loader/loader.conf</code> · <code>/loader/entries/</code>（Type1 启动项）</li>
+<li>内核镜像 / initrd；启用 OSTree 时位于 <code>/ostree/poky-&lt;sha256&gt;/</code></li>
+<li><code>/loader/keys/authkeys/</code>（secure boot 的签名 Auth 文件）</li>
+</ul>
+
+<h4>Type1（BLS）vs Type2（UKI）</h4>
+<ul class="tight">
+<li><b>Type1</b>：<code>/loader/entries/*.conf</code> 分别指 kernel + initrd + cmdline</li>
+<li><b>Type2（UKI）</b>：kernel+initrd+cmdline+os-release 合并为单个 PE/EFI（stub <code>linuxx64.efi.stub</code>），
+  由 <code>linux-qcom-uki.bb</code> 生成、<code>esp-qcom-image.bb</code> 打包进 <code>efi.bin</code>。<b>更安全</b>：签一次覆盖全部启动实体。</li>
+</ul>
+
+<div class="callout note"><span class="lbl">本项目 UKI 细节（已核实，见 log.md）</span>
+  <p>本项目 UKI 的 ukify <b>不含 <code>--dtb</code></b>（DTB 由 UEFI 从 <code>dtb_a</code> 分区加载，不进 UKI）；
+  <code>root=/dev/disk/by-partlabel/system</code>；UKI 含 <code>initramfs-qcom-image</code>。
+  <code>qcom-multimedia-image</code> 是 <b>host</b> 镜像，Linux 跑在 Gunyah EL2 之上的 primary VM。</p>
+</div>
+
+<h4>Secure Boot</h4>
+<ul class="tight">
+<li>UEFI 密钥：<b>PK</b>(仅1，最后注册) · <b>KEK</b>(多) · <b>DB</b>(白名单) · <b>DBX</b>(黑名单)</li>
+<li>签名工具 <code>signing_tool.py</code>（依赖 OpenSSL、<code>sbsign</code>、<code>mtools</code>、Python3），<code>config.ini</code> 配 operation/image_type/file_path</li>
+<li>EFI/UKI(PE) 用 <code>sbsign --key … --cert … bootaa64.efi bootaa64.efi</code> 内嵌签名（解包 efi.bin → 签 → 重打包）</li>
+<li>DTB(非 PE) 用 OpenSSL CMS 分离签名生成 <code>*.dtb.sig</code>（校验时两文件都要）</li>
+<li>开启 secure boot 后，刷入的 <code>efi.bin</code>/UKI 必须先签名，否则 UEFI 拒绝加载</li>
+</ul>
+
+<hr>
+
+<h2 id="ota" class="anchor">11 · OTA 升级（Capsule + OSTree）</h2>
+<p>固件走 <b>UEFI Capsule</b>，OS/rootfs 走 <b>OSTree</b>，A/B 双槽 + systemd-boot 启动计数回滚。</p>
+
+<h4>固件（Capsule）</h4>
+<pre><code>mkdir /boot/EFI/UpdateCapsule
+scp &lt;fw.cap&gt; user@ip:/boot/EFI/UpdateCapsule/
+echo -e -n "\x4\x0\x0\x0\x0\x0\x0\x0" &gt; data.hex
+efivar -n 8be4df61-93ca-11d2-aa0d-00e098032b8c-OsIndications -f data.hex -w   # 触发 capsule
+reboot
+# 校验：/sys/firmware/efi/esrt/entries/entry0/{last_attempt_status(0=成功),last_attempt_version,fw_version}</code></pre>
+
+<h4>OS（OSTree）</h4>
+<pre><code>ostree admin status
+scp -r &lt;repo&gt; ...:/tmp  &amp;&amp;  ostree pull-local /tmp/&lt;repo&gt; &lt;branch&gt;
+ostree refs  &amp;&amp;  ostree admin deploy &lt;branch&gt;  &amp;&amp;  reboot
+ostree admin status   # 校验</code></pre>
+<p>回滚：systemd-boot 用文件名计数标签（<code>+3</code> 初始 → 失败递减 <code>+2-1</code>…<code>+0-3</code>），归零回退上一有效配置；
+成功启动后 <code>systemd-bless-boot.service</code> 清标签标记 good。</p>
+
+<hr>
+
+<h2 id="sysmisc" class="anchor">12 · init 脚本 / 二级 VM / SD 启动 / efivar / Docker</h2>
+
+<h4>系统 init 脚本（systemd，meta-qcom-hwe 提供）</h4>
+<ul class="tight">
+<li>存储：<code>var-persist.mount</code>、<code>resize-partition@.service</code>（启动时 e2fsck/mkfs/resize2fs 扩容）</li>
+<li>属性：<code>property-vault.service</code>、<code>persist-property-vault.service</code>（跑 <code>set-persist-prop.sh</code>）</li>
+<li>系统：<code>android-tools-adbd.service</code>、<code>pd-mapper.service</code>(管 protection domains)、<code>rsyslog</code>、<code>logrotate</code></li>
+</ul>
+
+<h4>二级虚拟机（Secondary VM）</h4>
+<ul class="tight">
+<li>Hypervisor <b>Gunyah</b>(Type-1)，VMM 用 <b>crosvm</b>(Rust)，命令带 <code>--hypervisor gunyah</code></li>
+<li>构建：host 装 clang-11，bblayers 加 <code>meta-rust</code>(Rust 1.73.0)，crosvm 进 packagegroup</li>
+<li>流程：<code>bitbake qcom-console-image</code>(host) → <code>bitbake multiconfig:qcom-guestvm:qcom-guestvm-image</code>(GuestVM) → 拷到设备 →
+  <code>crosvm … run --disable-sandbox --hypervisor gunyah --root &lt;rootfs&gt; &lt;kernel&gt;</code></li>
+</ul>
+
+<h4>从 SD 卡启动（冗余/回退）</h4>
+<ul class="tight">
+<li>设备节点 <code>/dev/mmcblk1</code>：p1 = 512MB vfat ← <code>efi.bin</code>；p2 = 10GB ext4 ← <code>system.img</code></li>
+<li>写入：<code>dd if=/tmp/efi.bin of=/dev/mmcblk1p1 bs=4M</code> / <code>dd if=/tmp/system.img of=/dev/mmcblk1p2 bs=4M</code></li>
+<li>作用：UFS/eMMC 的 EFI 分区损坏或 systemd-boot 失败时从 SD 回退；<b>引导固件(XBL)仍在 UFS/eMMC，SD 不刷引导固件</b></li>
+</ul>
+
+<h4>UEFI 变量（efivar）</h4>
+<p><code>efivar [-n &lt;GUID&gt;-&lt;Name&gt;] [-f file] [-p 打印] [-w 写]</code>；典型用途即上面 OTA 的 <code>OsIndications</code> 写入。</p>
+
+<h4>Docker</h4>
+<p><code>qcom-multimedia-image</code> 默认含 Docker（<code>packagegroup-qcom-containers</code>，依赖 <code>meta-virtualization</code>）。
+GPU 透传例：<code>docker run -it --rm --device=/dev/kgsl-3d0 &lt;image&gt;</code>。首条 docker 命令后守护进程自启。</p>
+
+<hr>
+
+<h2 id="trouble" class="anchor">13 · 排错速查（可直接复用）</h2>
+<table>
+<thead><tr><th>现象</th><th>处理</th></tr></thead>
+<tbody>
+<tr><td>bitbake "No reply from server in 30s"</td><td>删 build 目录下 <code>bitbake.lock</code>、<code>bitbake.sock</code>、<code>hashserve.lock</code></td></tr>
+<tr><td>pseudo "database disk image is malformed"</td><td><code>rm -rf tmp-glibc</code>；<code>bitbake -c cleanall pseudo-native &amp;&amp; bitbake pseudo-native</code></td></tr>
+<tr><td>"Argument list too long" / make 失败</td><td>workspace 路径缩到 &lt;90 字符</td></tr>
+<tr><td>FetchError 拉取失败</td><td><code>git config --global http.postBuffer 1048576000</code>；<code>BB_GIT_VERBOSE_FETCH="1"</code> 排查；必要时手动 <code>git clone --bare --mirror</code> 到 <code>downloads/git2/</code> 并 <code>touch &lt;name&gt;.git.done</code></td></tr>
+<tr><td>menuconfig "No valid terminal"</td><td><code>apt install screen tmux</code></td></tr>
+<tr><td>缺 dt-bindings 头</td><td><code>git config --global core.symlinks true</code></td></tr>
+<tr><td>inotify "No space left"</td><td><code>echo 1048576 &gt; /proc/sys/fs/inotify/max_user_watches</code></td></tr>
+<tr><td>locale 报错</td><td><code>locale-gen en_US.UTF-8</code> + <code>update-locale</code></td></tr>
+<tr><td>"Layer directory does not exist"</td><td>删 build 目录重跑 setup</td></tr>
+<tr><td>repo sync 命令混入不可见字符（从 PDF 复制）</td><td>把 <code>qcom-linux&lt;STX&gt;scarthgap</code> 改回 <code>qcom-linux-scarthgap</code></td></tr>
+<tr><td>Docker daemon 连不上</td><td><code>systemctl start docker</code>；权限 <code>usermod -aG docker $USER</code> + <code>newgrp docker</code></td></tr>
+</tbody>
+</table>
+
+<hr>
+
+<h2 id="mapping" class="anchor">14 · 对本项目（kas-radxa-dragon）的映射总结</h2>
+<ul>
+<li><b>machine 链</b>：板级 conf <code>require qcom-qcs6490.inc</code>（→ qcom-base.inc）；<code>qcs6490-radxa-dragon-q6a</code> 复用 SoC inc。</li>
+<li><b>核心可调点</b>：<code>SOC_FAMILY="qcm6490"</code>、<code>DEFAULTTUNE="armv8-2a-crypto"</code>、<code>QCOM_SELECTED_BSP</code>(custom/base)；
+  custom 才有 Adreno GPU、custom 6.6 内核(CodeLinaro <code>kernel.qclinux.1.0.r1-rel</code>)、DTBO。</li>
+<li><b>distro/镜像</b>：固定 <code>qcom-wayland</code>(+wayland/vulkan/opengl)，默认 <code>qcom-multimedia-image</code>。</li>
+<li><b>cmdline</b>：改 <code>KERNEL_CMDLINE_EXTRA</code>（SoC inc）；<code>earlycon</code> 仅 <code>DEBUG_BUILD=1</code> 默认有。</li>
+<li><b>固件/引导</b>：<code>packagegroup-firmware-qcm6490</code>；systemd-boot+UKI、bootbins、partconf、ext4-only、<code>0x80000000</code>/4KB。</li>
+<li><b>刷写</b>：firehose 三件套(<code>prog_firehose_ddr.elf</code> + <code>rawprogram*.xml</code> + <code>patch*.xml</code>)；
+  写全引导固件须覆盖 LUN1/2(xbl) + LUN4(aop)，对应 edl-ng 写全 LUN0–5。</li>
+<li><b>kas 等价</b>：<code>kas-radxa-q6a.yml</code> 替代 repo manifest + <code>setup-environment</code>，
+  定制项放 <code>local_conf_header</code> 或 <code>meta-radxa-dragon</code>。</li>
+<li><b>统一分支</b>：所有层 <code>scarthgap</code> / <code>qcom-linux-scarthgap</code>，manifest <code>qcom-6.6.90-QLI.1.5-Ver.1.1_qim-product-sdk-2.0.1</code>。</li>
+</ul>
+
+<hr>
+
+<h2 id="sources" class="anchor">15 · 来源 URL 清单（取正文用 /doc/ 静态形式）</h2>
+
+<h4>Build Guide（docID 主体 80-70020-254）</h4>
+<ul class="tight">
+<li><a href="https://docs.qualcomm.com/doc/80-70020-254/topic/build_landing_page.html">build_landing_page</a> · <a href="https://docs.qualcomm.com/doc/80-70020-254/topic/how_to.html">how_to</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-70020-254/topic/build_from_source_github_intro.html">build_from_source_github_intro</a>（注册用户 + Docker + netrc）</li>
+<li><a href="https://docs.qualcomm.com/doc/80-70020-254/topic/build_addn_info.html">build_addn_info</a>（firmware and extras）· <a href="https://docs.qualcomm.com/doc/80-70020-254/topic/github_workflow_unregistered_users.html">github_workflow_unregistered_users</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-70020-254/topic/build_frm_source_qsc_cli.html">build_frm_source_qsc_cli</a> · <a href="https://docs.qualcomm.com/doc/80-70018-254/topic/build_from_source_qsc_gui_intro.html">QSC GUI</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-70020-254/topic/troubleshoot_sync_build_and_flash.html">troubleshoot_sync_build_and_flash</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-70017-254/topic/flash_images.html">flash_images</a>（EDL 进入 + 前置）</li>
+</ul>
+
+<h4>Yocto Guide（docID 80-70029-27 / 80-70022-27 / 80-80021-27 / 80-70018-27）</h4>
+<ul class="tight">
+<li><a href="https://docs.qualcomm.com/doc/80-70022-27/topic/qualcomm_linux_yocto_overview.html">yocto_overview</a> · <a href="https://docs.qualcomm.com/doc/80-70018-27/topic/qualcomm_linux_metadata_layers_overview.html">metadata_layers_overview</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-70022-27/topic/meta_qcom_hwe.html">meta_qcom_hwe</a> · <a href="https://docs.qualcomm.com/doc/80-70029-27/topic/meta_qcom_distro.html">meta_qcom_distro</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-70029-27/topic/add_custom_machine_configurations.html">add_custom_machine_configurations</a> · <a href="https://docs.qualcomm.com/doc/80-70029-27/topic/add_custom_distro_configurations.html">add_custom_distro_configurations</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-80021-27/topic/managing_partitions_in_qualcomm_linux.html">managing_partitions</a> · <a href="https://docs.qualcomm.com/doc/80-70029-27/topic/persist_partition.html">persist_partition</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-70020-27/topic/configure_and_secure_boot_with_systemd_boot_and_uki.html">systemd-boot + UKI + secure boot</a> · <a href="https://docs.qualcomm.com/doc/80-70020-27/topic/system_initscripts.html">system_initscripts</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-80021-27/topic/update_fw_and_os_qualcomm_linux_using_capsule_and_ostree_mechanisms.html">OTA: capsule + ostree</a> · <a href="https://docs.qualcomm.com/doc/80-70029-27/topic/create_secondary_virtual_machine.html">create_secondary_virtual_machine</a></li>
+<li><a href="https://docs.qualcomm.com/doc/80-70029-27/topic/manage_uefi_environment_variables_using_efivar_tool.html">efivar</a> · <a href="https://docs.qualcomm.com/doc/80-70029-27/topic/run_docker_containers.html">run_docker_containers</a> · <a href="https://docs.qualcomm.com/doc/80-70020-27SC/topic/boot_linux_operating_system_from_sdcard.html">boot_from_sdcard</a></li>
+</ul>
+
+<h4>GitHub（真值来源，已交叉核实）</h4>
+<ul class="tight">
+<li><a href="https://github.com/qualcomm-linux/meta-qcom-hwe">meta-qcom-hwe</a> · <a href="https://github.com/qualcomm-linux/meta-qcom-distro">meta-qcom-distro</a> · <a href="https://github.com/qualcomm-linux/meta-qcom-realtime">meta-qcom-realtime</a> · <a href="https://github.com/qualcomm-linux/meta-qcom-qim-product-sdk">meta-qcom-qim-product-sdk</a></li>
+<li><a href="https://github.com/quic-yocto/qcom-manifest">qcom-manifest</a></li>
+</ul>
+
+<div class="callout warn"><span class="lbl">⚠ docID 会随版本变化</span>
+  <p>同一页面在不同 QLI 版本下 docID 不同（如 partitions 页同时见于 <code>80-80021-27</code> 与 <code>80-70020-27</code>）。
+  上方 URL 为整理时（2026-06）可取正文者；若失效，按页面 slug 在 <code>site:docs.qualcomm.com</code> 重新检索 docID，并优先核对版本是否仍为 QLI.1.5。</p>
+</div>
+
+<footer>
+  由 Claude 综合 Qualcomm Linux 官方文档（Build Guide + Yocto Guide 全部子页面）与 <code>qualcomm-linux/*</code> GitHub 源码整理，
+  面向 kas-radxa-dragon 维护。事实落地前请以本仓库 <code>kas-radxa-q6a.yml</code> 与检出的 layer 源码为准。
+  返回 <a href="index.md">wiki 首页</a>。
+</footer>
+
+</main>
+</div>
+</body>
+</html>
