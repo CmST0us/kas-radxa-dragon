@@ -163,7 +163,17 @@ local_conf_header:
     PERFORMANCE_BUILD = "0"
     QCOM_SELECTED_BSP = "custom"
     BB_DANGLINGAPPENDS_WARNONLY_forcevariable = "false"
-    INHERIT += "rm_work"
+    # rm_work 会在每个 recipe 完成后删掉其 WORKDIR（源码/configure/编译树），省磁盘但
+    # 让增量编译很慢——尤其内核：WORKDIR 被删后每次都从头 unpack/configure/compile，
+    # 无法走 make 的增量。bring-up/调试阶段先关掉以加速反复重建。
+    # 生产/CI 想省盘时改回 `INHERIT += "rm_work"`；折中方案见下方 rm-work-dev 段。
+    # INHERIT += "rm_work"
+
+  # 折中：保留 rm_work（省盘）但排除正在反复迭代的 recipe，使其 WORKDIR 常驻、增量快。
+  # 想用「全局 rm_work + 仅排除开发目标」时：注释回上面的 INHERIT，并取消下面注释。
+  rm-work-dev: |
+    # INHERIT += "rm_work"
+    # RM_WORK_EXCLUDE += "linux-qcom-custom linux-qcom-uki qcom-multimedia-image"
 
   # 来自原 site.conf。DL_DIR/SSTATE_DIR 默认落在本仓库根目录下，用 ?=
   # 便于通过环境变量覆盖以复用外部缓存 (${TOPDIR} 为构建目录，其上一级即仓库根)。
