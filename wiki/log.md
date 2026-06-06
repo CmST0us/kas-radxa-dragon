@@ -263,3 +263,36 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
   才会按新 URL 取 LE 包（否则被安全网拦下）。
 - 影响页/文件：scripts/flash-edl.sh（FW_URL 改 LE + cmd_spinor 拒刷 WP）、topics/flashing.md（新增「SPI
   引导固件必须 LE/不能 WP」一节 + 改固件来源/FW_URL）、components/machine-*.md（加引导固件配套备注）。
+
+## [2026-06-06] finding | GPU/VPU/USB(adb+aic8800wifi) 全废，根因=设备跑的 DTB 与本 BSP 内核不匹配
+- 现象（ssh root@设备实测）：① 无 `/dev/dri/card*`、无 renderD128，`gpu@3d00000`/`gmu` 驱动未绑定 → GPU 不工作；
+  ② 无 `/dev/video*`，`qcom-venus aa00000.video-codec` probe 失败 → VPU 不工作；③ 仅 `lo`/`eth0`，无任何
+  wlan，aic8800 USB 驱动未加载，`/sys/bus/usb/devices/` 为空（无 USB host 总线）→ aic8800 WiFi 不工作；
+  ④ 设备侧 adbd 在跑、configfs 有 adb 功能、`/dev/usb-ffs/adb` 已挂，但 `/sys/class/udc/` 为空（无 UDC）→
+  主机 `adb devices` 空、无法 adb shell。
+- 取证：重启抓 boot.log（dmesg 环被 pulseaudio 反复段错误的 audit 刷掉，须重启后立刻快照）。关键报错：
+  `qcom-venus ... Direct firmware load for qcom/vpu-2.0/venus.mbn failed -2`（盘上是 `vpu20_1v.mbn`）；
+  `msm-mdss ae00000.display-subsystem: failed to acquire mdss reset` → -22；两个 dwc3 控制器
+  `8c00000.usb`/`a600000.usb` 全程无 probe，手动 bind dwc3-qcom 返回 -ENODEV。
+- 根因（铁证）：设备 DTB 与本 BSP 内核来自不同来源。设备 DTB 节点 compatible 为
+  `qcom,snps-dwc3`（dwc3-qcom 只匹配 `qcom,dwc3` → 永不绑定）、venus 默认要 `venus.mbn`、DSP 固件路径
+  `qcom/qcs6490/radxa/dragon-q6a/*.mbn`、USB 同时存在 `8c00000`+`a600000`。这些字符串在本 BSP 内核源码树
+  （radxa/kernel rev `2e366d0`，即设备实际运行的内核）里**完全不存在**。反编译本次构建的
+  `qcs6490-radxa-dragon-q6a.dtb` 与合并产物 `combined-dtb.dtb`：USB 为 `usb@8cf8800`/`a6f8800`
+  `qcom,sc7280-dwc3`+`qcom,dwc3`（驱动能匹配）、GPU `qcom,adreno-635.0`+zap-shader(`a660_zap.mbn`)、
+  DSP 路径 `qcom/qcs6490/*.mdt` —— 与设备 DTB 完全两棵树。
+- 机理串联：内核是本次新构建（uname rev 匹配 2e366d0），但 DTB 仍是 `flat_build_251013`(LE) 引导固件里的
+  stock DTB（见前条：UKI 不内嵌 dtb、设备树由 UEFI/引导固件提供；只刷 UFS LUN0 OS 不会更新 DTB）。
+  新内核 + 旧/外来 DTB → dwc3 不绑定（连带 adb 无 UDC、aic8800 USB host 不通）、mdss reset 取不到、
+  GPU/GMU/venus 全 probe 失败。
+- 次要待办（修 DTB 后复测再定）：a) GPU 驱动模块——当前加载只含显示的 `msm_display.ko`，adreno GPU 在
+  mainline `msm.ko`（`msm_default/msm.ko`）里，需确认正确 DTB 下用哪套；b) venus 固件名——combined-dtb 的
+  venus 节点无 `firmware-name` 覆盖、默认 `venus.mbn`，盘上只有 `vpu20_1v.mbn`，可能仍需在 video dtbo 加
+  `firmware-name` 或提供 `venus.mbn`；c) 还需实际构建/刷 `dtb-qcom-image`(combined-dtb) 到 dtb 来源，且
+  确认 UEFI 取 dtb 的位置（分区 vs UEFI 内嵌）。
+- 旁证（非本次目标，记录备查）：pulseaudio 每 ~3s 段错误刷 audit 日志；lpass `33c0000.pinctrl` 拿不到
+  `core` 时钟连累音频 deferred；remoteproc adsp/cdsp `.mbn` 缺失；geni i2c/spi QUP 固件 -22；`usb_fw`
+  分区(/dev/sdd3)未格式化、`var-usbfw.mount` 失败。
+- 影响页/文件：components/machine-qcs6490-radxa-dragon-q6a.md（GPU/VPU/USB 与 DTB 来源），
+  components/driver-wifi-bt-aic8800d80.md（aic8800 依赖 USB host，先决条件=正确 DTB），topics/flashing.md
+  （DTB 来源/dtb-qcom-image 与引导固件 stock dtb 的关系）。诊断命令与 boot.log 取证法可回填上述页。
