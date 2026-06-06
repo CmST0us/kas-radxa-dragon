@@ -1,6 +1,6 @@
 # Machine: qcs6490-radxa-dragon-q6a
 
-_最后更新：2026-06-03_
+_最后更新：2026-06-06_
 
 Radxa Dragon Q6A 开发板的机器配置，定义在
 `meta-radxa-dragon/conf/machine/qcs6490-radxa-dragon-q6a.conf`，SoC 为 Qualcomm **QCS6490**。
@@ -30,6 +30,15 @@ Radxa Dragon Q6A 开发板的机器配置，定义在
 
 > 内核里启用了哪些 WiFi/BT 相关 CONFIG，见 [driver-wifi-bt-aic8800d80](driver-wifi-bt-aic8800d80.md)。
 
+## 引导固件（SPI NOR）必须配套 LE/QCLINUX，勿用 WP(Windows)
+
+本板从 **SPI NOR** 引导（PBL→XBL→UEFI→内核），该套引导固件**不在** kas/UFS 刷写范围内。Radxa 发
+两套互不兼容的 flat_build：**LE/QCLINUX**（Linux，HYP=Gunyah `hypvm.mbn`、UEFI 发设备树）与
+**wp_*（Windows Platform）**（HYP=`hyp.mbn`、UEFI 发 ACPI/SMBIOS）。本仓库构建的是 QCLINUX/LE HLOS，
+**只能配 LE 套件的 spinor**；若 SPI 残留 WP 引导固件，内核早期静默挂死、热复位入 dload（即 bring-up 时
+「全量刷 UFS 仍不启动」的真因——UFS 刷写不碰 SPI NOR）。判别与刷写见
+[flashing](../topics/flashing.md)（含 LE vs WP 对照表与 `flash-edl.sh` 防呆）。
+
 ## 同 layer 的另一机器
 
 `qcs9075-radxa-airbox-q900`（AIRbox Q900）也由 meta-radxa-dragon 提供，但不在本仓库
@@ -39,3 +48,4 @@ target 范围内。
 - [driver-wifi-bt-aic8800d80](driver-wifi-bt-aic8800d80.md)
 - [layers](layers.md)
 - [distro-and-images](../topics/distro-and-images.md)
+- [flashing](../topics/flashing.md) — SPI 引导固件 LE vs WP、edl-ng/qdl 刷写

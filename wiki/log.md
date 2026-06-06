@@ -177,3 +177,89 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
   重打 UKI、只刷 LUN0 后抓 `Exit EBS` 之后串口日志定位。**定位后须删除本段。**
 - 影响页/文件：kas-radxa-q6a.yml（新增 debug-bringup）。**真因定位后**再回填 topics/flashing.md
   （“只刷 LUN0 vs 全量”“SPI/spinor 与 HLOS 固件需同源”）与 machine 页。
+
+## [2026-06-06] change | bring-up 期间关闭 rm_work 以加速增量编译
+- `kas-radxa-q6a.yml` 的 `qcom-bsp` 段把 `INHERIT += "rm_work"` 注释掉（原继承自 QCOM auto.conf 基线）。
+  rm_work 每个 recipe 完成后删 WORKDIR，省盘但增量慢（内核尤甚：WORKDIR 没了 → 每次从头 make）。
+- 关掉**不触发全量重建**（rm_work 不参与其它任务签名，sstate 仍有效）；代价是 `work/` 涨到数十 GB。
+- 折中：新增全注释占位段 `rm-work-dev`（`INHERIT += "rm_work"` + `RM_WORK_EXCLUDE += "linux-qcom-custom
+  linux-qcom-uki qcom-multimedia-image"`）——磁盘紧张时启用，保留 rm_work 仅排除迭代中的 recipe。
+- 注意：仅改 cmdline 时内核不重编（sstate 还原），耗时主要在 image do_image 重组 system.img(8.6GB)，
+  与 rm_work 无关；rm_work 关闭主要利好「改内核源码/config」的循环。生产/CI 想省盘应改回开启。
+- 影响页/文件：kas-radxa-q6a.yml（qcom-bsp 段、新增 rm-work-dev 占位段）。
+
+## [2026-06-06] ingest | 整理 Qualcomm Linux 官方文档要点 → wiki/qualcomm-linux.html
+- 深入抓取 Qualcomm Linux 两大官方文档 Build Guide（80-70020-254）+ Yocto Guide（80-70029-27/
+  80-70022-27/80-80021-27/80-70018-27）的**全部子页面**，并与 `qualcomm-linux/*` GitHub 源码交叉核实，
+  产出单页 `wiki/qualcomm-linux.html`（自带 TOC/样式）。
+- 覆盖：版本基线/BSP 变体(QCOM_SELECTED_BSP custom/base)、metadata layers 依赖栈、meta-qcom-hwe 的
+  machine 三层 conf 链(qcom-base.inc→qcom-qcs6490.inc→板conf，SOC_FAMILY=qcm6490)、双内核与固件、
+  meta-qcom-distro/镜像、构建路线(manifest 表/源码=kas 等价/docker)、用户定制→kas 映射、刷写(firehose
+  三件套/进 EDL/LUN 表)、启动链/systemd-boot+UKI/secure boot、分区·persist、OTA(capsule+ostree)、
+  init/Gunyah VM/SD 启动/efivar/docker、排错速查，末尾「对本项目映射」与来源 URL 清单。
+- 两条使用须知写进文档：①取正文用 `/doc/<docID>/topic/<slug>.html`（`/bundle/...` 为 JS 壳抓不到）；
+  ②docs 默认展示较新版本(部分已 QLI 2.0/内核6.18)，须以本仓库 QLI.1.5 为准。
+- 记下一处命名歧义：官方「自定义 machine」文档称通用层为 `qcom-armv8a.conf`(upstream meta-qcom 老路径)，
+  而 QLI 产品线 meta-qcom-hwe 实际源码用 `qcom-base.inc`；稳定指令是板conf `require qcom-qcs6490.inc`。
+- 影响页：index.md（新增「外部参考资料」入口），wiki/qualcomm-linux.html（新建）。
+
+## [2026-06-06] finding | 镜像为 OSTree/sota；earlycon 静默实因 sota cmdline 丢 console=
+- 刷入带 earlycon 的新 efi 后**仍零内核输出、热复位入 dload**。核验构建产物（md5 一致、刷的是最新）：
+  UKI 的 `.cmdline` = `root=LABEL=otaroot rootfstype=ext4 … <earlycon 等 KERNEL_CMDLINE_EXTRA> …
+  ostree=/ostree/boot.1/poky/4c0eb985…/0` —— **本镜像是 OSTree/sota 启动**。
+- 根本可见性问题（非“内核死得更早”）：
+  · `linux-qcom-uki.bb` 仅在 **非 sota** 分支加 `console=`(来自 SERIAL_CONSOLES)；sota 路径**丢掉 console=**
+    → 即便内核正常也无串口输出。上次实验因此“被污染”，不能解读为死在 earlycon 之前。
+  · 之前用的是**裸 `earlycon`**，依赖 DT `/chosen/stdout-path` 绑定；改用显式地址更稳。
+- 取证：从 dtb.bin(vfat,FAT16) 按 FDT 魔数 carve 出 .dtb 反编译 → `stdout-path="serial0:115200n8"`、
+  `serial0=/soc@0/geniqup@9c0000/serial@994000` ⇒ **调试 UART = GENI，基址 0x00994000**。
+- sota 来源：**Qualcomm 发行版基线默认**（`meta-qcom-distro/conf/distro/include/qcom-base.inc`:24
+  `DISTRO_FEATURES:append=" … sota"`），非本仓库添加；故 OSTree 是 QLI 既定设计。
+- 动作：`kas-radxa-q6a.yml` 的 `debug-bringup` 改为显式
+  `console=ttyMSM0,115200n8 earlycon=qcom_geni,mmio32,0x00994000 …`（铁定出字）。
+- ⚠ OSTree 强耦合：efi(UKI+ostree karg) 与 system.img(ostree repo/部署 checksum) 必须同构建；
+  **「只刷 efi」快捷循环对 sota 镜像不安全**，调试期 efi+system 一起刷（整 LUN0）。
+- 下一步：① 显式 console+earlycon 重试看真因；② 若仍黑屏 → 拉 dload ramdump 读内核 `__log_buf`
+  （绕开串口可见性）。注意：原始“全量刷写也不启动”早于本次快捷循环，OSTree 错配非元凶、仅潜在叠加。
+- 影响页/文件：kas-radxa-q6a.yml（debug-bringup 改显式）。真因定位后回填 flashing.md/machine 页/distro-images。
+
+## [2026-06-06] finding | 真因=SPI NOR 引导固件版本不匹配；刷 251013 spinor 后成功启动
+- **根因确认**：设备出厂 SPI NOR 引导固件为 `260120`（UEFI banner `BOOT.MXF...Jan 20 2026`），
+  与 kas 构建的 HLOS（内核/dtb/el2-dtb/hyp，radxa kernel.qclinux.1.0.r1-rel）**不兼容** →
+  内核在 EL2 之上进入后早期静默挂死、热复位入 dload。**换 SPI 引导固件为 `251013` 后系统正常启动。**
+- 操作：设备在 EDL(9008)，用 edl-ng 刷本地 `dragon-q6a_flat_build_251013/flat_build/spinor/dragon-q6a/`：
+  `edl-ng --loader prog_firehose_ddr.elf --memory SPINOR rawprogram rawprogram0.xml patch0.xml` → `edl-ng reset`。
+  写入 cdt/XBL/XblRamdump/XBL_CONFIG/UEFI/AOP/TZ/DEVCFG/HYP/QUP/CPUCP/SHRM/ImageFv/GPT 全 100%，
+  exit 0；缺失的 `fat12test.bin`(FATTEST) 被 edl-ng 自动跳过（非致命，**edl-ng 遇缺文件是跳过不中止**）。
+- 教训/启示：
+  · 之前几轮（dtb 错配 / OSTree console / earlycon 可见性）均为支线；真正变量是 **SPI 侧引导固件**——
+    UFS 全量刷写只换 UFS LUN，SPI NOR 始终是出厂版，与新 HLOS 不配套。
+  · **bring-up 换 HLOS 时，SPI 引导固件需与之配套**（同一 flat_build 套件的 spinor + ufs 才自洽）。
+  · 串口可见性结论仍有效留存：sota/OSTree 镜像 cmdline 不含 console=（仅非 sota 加）；调试 UART
+    GENI 基址 `0x00994000`（`earlycon=qcom_geni,mmio32,0x00994000`）。
+- 已移除 `kas-radxa-q6a.yml` 的临时 `debug-bringup` 段（保留 rm-work-dev 占位）。
+- 影响页/文件：kas-radxa-q6a.yml（删 debug-bringup）。**待回填**：topics/flashing.md（新增「SPI 引导固件与
+  HLOS 需配套；spinor 刷写来源/版本」）、machine 页、distro-and-images（OSTree/console 备注）。
+
+## [2026-06-06] finding | 订正根因：是 LE vs WP 两套 OS 固件，不是「新旧版本不匹配」；并修脚本默认刷 WP 的坑
+- **逐文件比对** `dragon-q6a_flat_build_251013`(能启动) 与 `dragon-q6a_flat_build_wp_260120`(原厂,起不来)
+  两套 spinor，铁证在 `contents.xml`：前者 `QCM6490.`**`LE`**`.1.0`/`hlos_type=LE`/`LE.QCLINUX.1.0.r1`；
+  后者 `QCM6490.`**`WP`**`.1.0`/`hlos_type=WP`/`<windows_root_path>` —— **WP = Windows Platform**。
+- 关键差异：HYP `hypvm.mbn`(1.5MB,Gunyah,Linux 主 VM) vs `hyp.mbn`(427KB,Windows hyp)；DEVCFG `devcfg.mbn`
+  vs `devcfg_windows_hyp_rfcomm.mbn`；UEFI 独立 `uefi.elf`(含 FDT 机制 `SecFdtInitRootHandle`/`fdt_header`,
+  发设备树) vs `PILFV.Fv`(WoA PI 卷,发 ACPI+SMBIOS)；WP 专有分区 VarStore/SMBIOS/PILFv/TZAPPS/DPP/SSD；
+  XBL 变体 `SocKodiakLAA`/`KODIAKLA` vs `SocKodiakWP`/`KODIAKWP`；TZ.XF 5.29(KODIAK) vs 5.11(LAHAINA)。
+- 机理（解释「earlycon 都零输出 + 热复位入 dload」）：本仓库 HLOS 是 QCLINUX/LE，UKI 不内嵌 dtb，
+  设备树靠 UEFI 提供且跑 Gunyah 主 VM。WP 固件下 ① UEFI 不发 DT → 内核找不到 GENI UART(0x00994000)→
+  连 earlycon 都无字；② WP hyp 给 Windows guest 配 EL2 → Linux 期望的 Gunyah 主 VM 不在 → EL2 异常热复位。
+- **订正前条 finding**：把它表述为「260120(新) vs 251013(旧) 版本不匹配」**不准确**——与版本新旧无关
+  （WP boot 版本 `00549` 反比 LE 的 `00364` 更新），实为 **目标 OS（Linux/LE vs Windows/WP）整套不同**。
+  「UFS 全量刷不碰 SPI NOR、故 SPI 的 Windows 引导栈残留」这一结论仍成立。
+- **修复制度性坑**：`scripts/flash-edl.sh` 的 `FW_URL` 原默认 `dragon-q6a_flat_build_wp_260120.zip`(WP!)，
+  即 `spinor`/`all` 默认会把 Windows 引导固件刷进 SPI → 必然起不来。已改默认为
+  `dragon-q6a_flat_build_251013.zip`（LE，URL 经 HEAD 校验 200 且 Content-Length 与本地 zip 一致）；并在
+  `cmd_spinor` 加安全网：固件目录含 `PILFV.Fv`/`devcfg_windows_hyp*`/`hyp.mbn` 等 WP 特征即拒刷并提示清缓存重取。
+  注意：`scripts/firmware/` 现仍残留旧的 WP 解压物，需 `rm -rf scripts/firmware && scripts/flash-edl.sh fetch`
+  才会按新 URL 取 LE 包（否则被安全网拦下）。
+- 影响页/文件：scripts/flash-edl.sh（FW_URL 改 LE + cmd_spinor 拒刷 WP）、topics/flashing.md（新增「SPI
+  引导固件必须 LE/不能 WP」一节 + 改固件来源/FW_URL）、components/machine-*.md（加引导固件配套备注）。

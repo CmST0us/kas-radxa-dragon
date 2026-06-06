@@ -4,8 +4,12 @@
 #
 # 参考 flange 的 builder/flash.py:QualcommFlashStrategy，适配本 kas/Yocto 工程。
 #
-# 固件包：SPI NOR 固件、UFS HLOS 镜像、firehose loader 均取自 Radxa 官方固件包
-#   https://dl.radxa.com/dragon/q6a/images/dragon-q6a_flat_build_wp_260120.zip
+# 固件包：SPI NOR 引导固件与 firehose loader 取自 Radxa 官方 **LE/QCLINUX** flat_build：
+#   https://dl.radxa.com/dragon/q6a/images/dragon-q6a_flat_build_251013.zip
+# ⚠ 必须用 LE(Linux) 套件，**切勿用 wp_*(Windows Platform) 套件**——WP 的 SPI 引导固件
+#   （HYP 为 Windows 用 hyp.mbn、UEFI 出 ACPI/SMBIOS 而非设备树）与本仓库构建的 Qualcomm
+#   Linux HLOS 不配套，会让内核早期静默挂死、热复位入 dload（即「全量刷 UFS 仍不启动」的真因，
+#   因为 UFS 刷写不碰 SPI NOR）。详见 wiki/topics/flashing.md。
 # 首次运行会自动下载并解压到 scripts/firmware/（已 gitignore）。脚本只引用工程内路径，
 # 不依赖本机任何外部路径。
 #
@@ -56,8 +60,9 @@ UFS_LUNS="${UFS_LUNS:-0 1 2 3 4 5}"
 MAXPAYLOAD="${MAXPAYLOAD:-1048576}"
 
 # 官方固件包与工程内缓存目录（一切外部资源下载进工程，不引用工程外路径）。
-# 只在刷固件时用到，放在 scripts/ 下（不污染仓库根）。
-FW_URL="${FW_URL:-https://dl.radxa.com/dragon/q6a/images/dragon-q6a_flat_build_wp_260120.zip}"
+# 只在刷 spinor 引导固件时用到，放在 scripts/ 下（不污染仓库根）。
+# ⚠ 必须是 LE/QCLINUX flat_build（不是 wp_* 的 Windows 套件）——理由见文件头与 wiki。
+FW_URL="${FW_URL:-https://dl.radxa.com/dragon/q6a/images/dragon-q6a_flat_build_251013.zip}"
 FW_DIR="${FW_DIR:-$SCRIPT_DIR/firmware}"
 
 # 系统盘镜像来源：默认用固件包的 ufs_hlos；要刷 kas 自构建镜像则设
@@ -226,6 +231,14 @@ cmd_spinor() {
     ensure_firmware
     loader="$(locate_loader)"
     sdir="$(dirname "$loader")"        # spinor 固件与 loader 同目录
+    # 安全网：WP(Windows) 套件的 SPI 引导固件与本仓库 Linux HLOS 不配套，刷了会无法启动。
+    # 即便 FW_URL 已默认 LE 包，scripts/firmware/ 里若残留旧的 WP 解压物也会在此被拦下。
+    if ls "$sdir"/devcfg_windows_hyp* "$sdir"/PILFV.Fv "$sdir"/hyp.mbn >/dev/null 2>&1; then
+        _err "检测到 WP(Windows) 引导固件特征（PILFV.Fv / devcfg_windows_hyp* / hyp.mbn）于：${sdir#$REPO_DIR/}"
+        _err "本仓库构建的是 Qualcomm Linux(LE/QCLINUX) HLOS，必须刷 LE 套件的 spinor（含 hypvm.mbn/独立 uefi.elf）。"
+        _info "清掉缓存重取正确包： rm -rf \"$FW_DIR\" && $0 fetch  （FW_URL 已默认 LE flat_build）"
+        die "拒绝刷入 WP 引导固件（防止把设备刷成无法启动）。详见 wiki/topics/flashing.md。"
+    fi
     require_edl_mode
     # edl-ng 的 --memory 枚举为大写：NAND|NVME|SDCC|SPINOR|UFS。SPI NOR 只有单个 LUN0。
     flash_rawprogram "$edl" "SPINOR" "$sdir" "$loader" "0"
