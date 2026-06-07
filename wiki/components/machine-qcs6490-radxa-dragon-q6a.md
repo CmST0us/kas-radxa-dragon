@@ -14,9 +14,23 @@ Radxa Dragon Q6A 开发板的机器配置，定义在
   （providers：`qcom-graphicsdevicetree`、`qcom-videodtb`）
 - `MACHINE_ESSENTIAL_EXTRA_RRECOMMENDS += " wifibt-firmware-aic8800d80-usb"`
   —— 本仓库新增，给 AIC8800D80 装固件，见 [driver 页](driver-wifi-bt-aic8800d80.md)。
+- `MACHINE_ESSENTIAL_EXTRA_RRECOMMENDS += " qcom-qupv3fw-rootfs"`
+  —— 本仓库新增（commit `7a0c513`），把 i2c GENI SE 固件 `qupv3fw.elf` 装进 rootfs `/lib/firmware/`，
+  见下文「i2c SE 固件」。
 
 继承自 `qcom-qcs6490.inc` 的 `MACHINE_ESSENTIAL_EXTRA_RRECOMMENDS` 还包括
 `kernel-modules`、`fastrpc`、`modemmanager`、`networkmanager-*`、`pd-mapper` 等。
+
+## i2c SE 固件（qupv3fw.elf）板级能力
+
+本板部分 GENI SE 未被 bootloader 预配为目标协议，DT 节点声明 `qcom,load-firmware` 后内核 geni
+驱动需从 `/lib/firmware/qupv3fw.elf` 加载 SE 固件，总线方能上线。upstream linux-firmware 不含
+qcs6490 版（只有 sa8775p），它仅存在于 `firmware-qcom-bootbins`（QCM6490_bootbinaries）且只 deploy
+不进 rootfs。故板层新增配方 `recipes-bsp/qup-firmware/qcom-qupv3fw-rootfs_1.0.bb` 将其装入 rootfs，
+经上面的 `MACHINE_ESSENTIAL_EXTRA_RRECOMMENDS` 进镜像。
+
+典型消费者：魅族 E3 面板的 i2c13（`a94000.i2c`）触摸/背光——缺该固件则 i2c13 总线 deferred、
+屏不亮，真机已坐实并修复，见 [mipi-panel-meizu-e3](mipi-panel-meizu-e3.md) 第四节。
 
 ## 内核（linux-qcom-custom）
 

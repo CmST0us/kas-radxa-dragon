@@ -22,7 +22,8 @@ _最后更新：2026-06-03_
 | meta-qcom-hwe | github.com/qualcomm-linux | `a5fdd68` | 根（机器定义所在） |
 | meta-qcom-distro | github.com/qualcomm-linux | `08cc4b0` | 根（distro 定义所在） |
 | meta-qcom-qim-product-sdk | github.com/qualcomm-linux | `eb937f9` | 根 |
-| **meta-radxa-dragon** | github.com/CmST0us（fork） | `e7cfe34`（scarthgap 最新） | 根（板级 overlay） |
+| **meta-radxa-dragon** | github.com/CmST0us（fork） | `7a0c513`（scarthgap 最新） | 根（板级 overlay） |
+| **meta-mipi-panel**（可选） | github.com/CmST0us | `2b3fab3`（scarthgap） | 根（MIPI 屏适配，仅 `meizu-e3-panel.yml` 组合时引入） |
 
 ## 子 layer 的处理
 
@@ -33,16 +34,25 @@ _最后更新：2026-06-03_
 
 ## meta-radxa-dragon（板级 overlay）
 
-当前为**远端锁定模式**（commit `e7cfe34`，即远端 scarthgap HEAD / 分支最新），详见
+当前为**远端锁定模式**（commit `7a0c513`，即远端 scarthgap HEAD / 分支最新），详见
 [versioning](../topics/versioning.md)。它提供：
 - machine 配置 `qcs6490-radxa-dragon-q6a`（见 [machine 页](machine-qcs6490-radxa-dragon-q6a.md)）；
 - 自定义内核 `linux-qcom-custom`（radxa kernel fork）；
 - WiFi/BT 固件配方 `wifibt-firmware`（见 [driver 页](driver-wifi-bt-aic8800d80.md)）；
+- **i2c GENI SE 固件 `qcom-qupv3fw-rootfs`**（`recipes-bsp/qup-firmware/`，把 `qupv3fw.elf` 装进
+  rootfs `/lib/firmware/`；板级常备能力，机器配置 RRECOMMENDS 进镜像；commit `7a0c513` 新增，
+  见 [mipi-panel-meizu-e3](mipi-panel-meizu-e3.md) 第四节）；
 - fastrpc、linux-firmware、镜像配方等的板级定制；
 - gflags 分支改名修复 bbappend（`dynamic-layers/openembedded-layer/.../gflags_2.2.2.bbappend`，
   见 [构建故障](../topics/build-and-dev-workflow.md#常见构建故障)）。
 
 远端：`git@github.com:CmST0us/meta-radxa-dragon.git`（fork 自 `radxa/meta-radxa-dragon`）。
+
+## meta-mipi-panel（可选 MIPI 屏适配层）
+
+仅当组合 `meizu-e3-panel.yml` 时引入（远端锁定 `2b3fab3`，分支 scarthgap）。承载 MIPI-DSI 屏，
+首块为魅族 E3（显示/触摸/背光）。详见 [mipi-panel-meizu-e3](mipi-panel-meizu-e3.md)。
+远端：`git@github.com:CmST0us/meta-mipi-panel.git`。
 
 ## 相关
 - [kas-configuration](../topics/kas-configuration.md) — 这些条目在 yml 里的写法

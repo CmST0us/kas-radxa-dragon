@@ -126,14 +126,14 @@ repos:
 
   # --- 板级 overlay (远端锁定) ---
   # 由 kas 从远端 clone/checkout 到 layers/meta-radxa-dragon。
-  # commit e7cfe34 = bf47b24(AIC8800D80 固件 + gflags 修复) + dtb 修复
-  #   (OSTREE_DEPLOY_DEVICETREE 部署 combined-dtb，修好 USB/GPU/VPU/display；
-  #    见 wiki/topics/dtb-and-boot-devicetree.md)。
+  # commit 7a0c513 = e7cfe34(dtb 修复:OSTREE_DEPLOY_DEVICETREE 部署 combined-dtb，
+  #   修好 USB/GPU/VPU/display) + qup-firmware(qcom-qupv3fw-rootfs 装 qupv3fw.elf
+  #   到 rootfs，供 geni i2c 加载 SE 固件——meizu-e3 面板的 i2c13 触摸/背光所需)。
   # 需本地调试时：注释下面 4 行，改用 `path: ../meta-radxa-dragon`（同级本地副本）。
   meta-radxa-dragon:
     url: https://github.com/CmST0us/meta-radxa-dragon.git
     branch: scarthgap
-    commit: e7cfe34efdf9d42833098fb3f725c05b283176e5
+    commit: 7a0c5139a0d08efa7d989d2bbe9d0da487c47e83
     path: layers/meta-radxa-dragon
 
 # ── local.conf 内容 (替代原 set_bb_env.sh 生成的 local/auto/site.conf) ──

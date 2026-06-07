@@ -376,3 +376,25 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
   残留 `msm_dpu: no GPU device` 为 KGSL/DRM 架构分离的良性提示，与本改动无关。
 - 影响 wiki 页：新增 topics/dtb-and-boot-devicetree.md（主页面）；更新 components/machine-*.md、index.md。
 - 相关：openspec/changes/fix-dtb-via-ostree-devicetree/（proposal/design/specs/tasks）。
+
+## [2026-06-07] change | 新增 meta-mipi-panel 适配魅族 E3 MIPI-DSI 屏（显示/触摸/背光），真机点亮
+- 实施 change `add-meizu-e3-panel-layer`（openspec，已归档），新建可选可组合的 MIPI 屏适配层
+  `meta-mipi-panel`（远端锁定 `2b3fab3`/scarthgap），kas 片段 `meizu-e3-panel.yml` 叠加启用：
+  `kas build kas-radxa-q6a.yml:meizu-e3-panel.yml`；不组合则基线不变。
+- 面板层内容：单配方 `meizu-e3-panel`（inherit module deploy）一次产出三块 OOT 驱动
+  （panel_meizu_e3 屏 / sec_ts 触摸 / sgm37604a 背光）+ 把 `.dtso` 编成 `meizu-e3-panel.dtbo`；
+  dtbo 经 `linux-qcom-mergedtb.bbappend`（anonymous python）增广 `KERNEL_TECH_DTBOS` 合进
+  combined-dtb（复用现有 dtb 管线，见 topics/dtb-and-boot-devicetree.md）。
+- 实施中两处关键结论：① bitbake ConfHandler 不支持 varflag 的 `:append`，故 dtbo 登记改走 bbappend
+  python 读机器配置已设值后增广（parse 顺序安全）；② 真机 bring-up 屏黑的真因 = rootfs 无
+  `/lib/firmware/qupv3fw.elf` → i2c13(a94000.i2c) geni 加载 SE 固件失败 -2 → 总线 deferred →
+  背光/触摸/panel 连锁 deferred → DSI 不使能。
+- 板级修复（归到 meta-radxa-dragon，升 `e7cfe34`→`7a0c513`）：新增 `qcom-qupv3fw-rootfs`
+  从 firmware-qcom-bootbins(QCM6490_bootbinaries) 取 qupv3fw.elf 装进 rootfs，机器配置
+  `MACHINE_ESSENTIAL_EXTRA_RRECOMMENDS` 进镜像（与 wifibt 固件同款，板层不反向引用上层）。
+- 验证：完整 kas build + 真机刷机，开机即点屏（DSI-1 1080x2160@60，weston 出图）、触摸/背光可用，
+  无需运行时干预。
+- 影响 wiki 页：新增 components/mipi-panel-meizu-e3.md；更新 components/layers.md（commit 升级 +
+  qup-firmware + meta-mipi-panel）、components/machine-*.md（qupv3fw 板级固件）、index.md。
+- 相关：openspec/changes/archive/add-meizu-e3-panel-layer/；commit meta-radxa-dragon `7a0c513`、
+  meta-mipi-panel `2b3fab3`。

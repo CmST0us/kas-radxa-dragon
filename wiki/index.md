@@ -20,6 +20,7 @@ _最后更新：2026-06-07_
 - [topics/dtb-and-boot-devicetree](topics/dtb-and-boot-devicetree.md) — 内核设备树来源（UEFI 内嵌）与修复：`OSTREE_DEPLOY_DEVICETREE` 让启动条目写 `devicetree` 行覆盖固件旧树，修好 USB/GPU/VPU/display
 
 ## Components（实体：具体的东西）
-- [components/layers](components/layers.md) — 12 个 layer 的 URL / 锁定 commit / 角色
-- [components/machine-qcs6490-radxa-dragon-q6a](components/machine-qcs6490-radxa-dragon-q6a.md) — 机器配置、内核、设备树
+- [components/layers](components/layers.md) — layer 清单的 URL / 锁定 commit / 角色（含可选 meta-mipi-panel）
+- [components/machine-qcs6490-radxa-dragon-q6a](components/machine-qcs6490-radxa-dragon-q6a.md) — 机器配置、内核、设备树、qupv3fw 板级固件
 - [components/driver-wifi-bt-aic8800d80](components/driver-wifi-bt-aic8800d80.md) — AIC8800D80 WiFi/BT 驱动与固件
+- [components/mipi-panel-meizu-e3](components/mipi-panel-meizu-e3.md) — 魅族 E3 MIPI-DSI 屏（meta-mipi-panel 层：显示/触摸/背光 + qupv3fw 依赖），`kas ...:meizu-e3-panel.yml` 可选叠加

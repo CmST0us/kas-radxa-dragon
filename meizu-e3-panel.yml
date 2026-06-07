@@ -1,0 +1,29 @@
+# kas 片段：魅族 E3 39pin MIPI-DSI 屏（显示/触摸/背光）支持
+#
+# 与主配置组合启用：
+#   kas build kas-radxa-q6a.yml:meizu-e3-panel.yml
+#   kas shell kas-radxa-q6a.yml:meizu-e3-panel.yml
+#
+# 本片段只负责引入 meta-mipi-panel 这一个 layer。魅族 E3 面板的全部接线
+# （dtbo 登记进 KERNEL_TECH_DTBOS、provider 登记、镜像装包、模块自动加载）
+# 都在该 layer 的 conf/layer.conf 内（machine override 收口到 Q6A），
+# 做到「引入 layer = 启用面板」，故此处无需 local_conf_header。
+#
+# 依赖的 i2c GENI SE 固件 qupv3fw.elf 是板级基础能力，由 meta-radxa-dragon
+# 的 qcom-qupv3fw-rootfs 提供（机器配置 RRECOMMENDS），不在本片段范围。
+#
+# 不组合本片段时，kas build kas-radxa-q6a.yml 的产物与基线完全一致。
+
+header:
+  version: 14
+
+repos:
+
+  # meta-mipi-panel：自包含 MIPI 屏适配层，含魅族 E3 的三块 OOT 驱动源与 .dtso。
+  # 远端锁定（由 kas 从远端 clone/checkout 到 layers/meta-mipi-panel）。
+  # 需本地调试时：注释下面 3 行，改用 `path: ../meta-mipi-panel`（同级本地副本）。
+  meta-mipi-panel:
+    url: https://github.com/CmST0us/meta-mipi-panel.git
+    branch: scarthgap
+    commit: 2b3fab37253beebe45d8eb47034d0455a34874ab
+    path: layers/meta-mipi-panel
