@@ -398,3 +398,22 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
   qup-firmware + meta-mipi-panel）、components/machine-*.md（qupv3fw 板级固件）、index.md。
 - 相关：openspec/changes/archive/add-meizu-e3-panel-layer/；commit meta-radxa-dragon `7a0c513`、
   meta-mipi-panel `2b3fab3`。
+
+## [2026-06-08] change | meta-mipi-panel 货架/选择解耦：层只提供屏，启用交给 kas 片段
+
+- 起因：`meizu-e3-panel.yml` 与 `meta-mipi-panel` 语义错位。层定位为「承载本 BSP 全部 MIPI 屏」的
+  货架，但 `2b3fab3` 把魅族 E3 的启用接线写死在 `conf/layer.conf`，成了「引入层=启用屏」——
+  片段没做任何「选择」，且多屏共存时会一次性全启用。
+- 改动（meta-mipi-panel，`2b3fab3`→`56cfec8`，main 与 scarthgap 同步）：
+  ① `conf/layer.conf` 删除写死魅族 E3 的 `IMAGE_INSTALL` / `KERNEL_MODULE_AUTOLOAD` /
+  `KERNEL_TECH_DTBO_PROVIDERS` 追加，仅留集合注册与依赖；② `linux-qcom-mergedtb.bbappend` 由写死
+  `meizu-e3-panel.dtbo` 改为泛化、按选择驱动——读片段填入的 `MIPI_PANEL_DTBOS` 逐个并入机器的
+  `KERNEL_TECH_DTBOS`，未选屏时 no-op。
+- 改动（本仓库）：`meizu-e3-panel.yml` 新增 `local_conf_header`，把四项启用接线（含新桥接变量
+  `MIPI_PANEL_DTBOS`）搬到片段，全部 `:qcs6490-radxa-dragon-q6a` override 收口；commit 锁
+  `2b3fab3`→`56cfec8`。自此「引入层=屏可用」「选片段=启用屏」，加新屏只写新片段、不动货架层。
+- 验证：`kas dump kas-radxa-q6a.yml:meizu-e3-panel.yml` 解析通过，拉取 `56cfec8`，
+  选择接线全部生效且无双重启用；YAML 与 bbappend python 语法校验通过。
+- 影响 wiki 页：components/mipi-panel-meizu-e3.md（新增「货架/选择」节 + 改写第三节接线分布 + 升 commit）、
+  components/layers.md（commit 升级 + 货架语义）。
+- 相关：commit meta-mipi-panel `56cfec8`；本仓库 `meizu-e3-panel.yml`。

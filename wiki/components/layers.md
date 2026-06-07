@@ -23,7 +23,7 @@ _最后更新：2026-06-03_
 | meta-qcom-distro | github.com/qualcomm-linux | `08cc4b0` | 根（distro 定义所在） |
 | meta-qcom-qim-product-sdk | github.com/qualcomm-linux | `eb937f9` | 根 |
 | **meta-radxa-dragon** | github.com/CmST0us（fork） | `7a0c513`（scarthgap 最新） | 根（板级 overlay） |
-| **meta-mipi-panel**（可选） | github.com/CmST0us | `2b3fab3`（scarthgap） | 根（MIPI 屏适配，仅 `meizu-e3-panel.yml` 组合时引入） |
+| **meta-mipi-panel**（可选） | github.com/CmST0us | `56cfec8`（scarthgap） | 根（MIPI 屏「货架」层，仅 `meizu-e3-panel.yml` 等选择片段组合时引入） |
 
 ## 子 layer 的处理
 
@@ -48,10 +48,12 @@ _最后更新：2026-06-03_
 
 远端：`git@github.com:CmST0us/meta-radxa-dragon.git`（fork 自 `radxa/meta-radxa-dragon`）。
 
-## meta-mipi-panel（可选 MIPI 屏适配层）
+## meta-mipi-panel（可选 MIPI 屏「货架」层）
 
-仅当组合 `meizu-e3-panel.yml` 时引入（远端锁定 `2b3fab3`，分支 scarthgap）。承载 MIPI-DSI 屏，
-首块为魅族 E3（显示/触摸/背光）。详见 [mipi-panel-meizu-e3](mipi-panel-meizu-e3.md)。
+仅当组合选择片段（如 `meizu-e3-panel.yml`）时引入（远端锁定 `56cfec8`，分支 scarthgap）。
+作为「货架」承载本 BSP 需支持的全部 MIPI-DSI 屏，**只让各屏可用、不因被引入就启用**；
+启用哪块屏由选择片段决定（货架/选择解耦，见
+[mipi-panel-meizu-e3](mipi-panel-meizu-e3.md) 第〇节）。首块为魅族 E3（显示/触摸/背光）。
 远端：`git@github.com:CmST0us/meta-mipi-panel.git`。
 
 ## 相关

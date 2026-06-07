@@ -1,13 +1,17 @@
-# kas 片段：魅族 E3 39pin MIPI-DSI 屏（显示/触摸/背光）支持
+# kas 选择片段：从 meta-mipi-panel 货架中【选中】魅族 E3 39pin MIPI-DSI 屏
+# （显示/触摸/背光）。
 #
 # 与主配置组合启用：
 #   kas build kas-radxa-q6a.yml:meizu-e3-panel.yml
 #   kas shell kas-radxa-q6a.yml:meizu-e3-panel.yml
 #
-# 本片段只负责引入 meta-mipi-panel 这一个 layer。魅族 E3 面板的全部接线
-# （dtbo 登记进 KERNEL_TECH_DTBOS、provider 登记、镜像装包、模块自动加载）
-# 都在该 layer 的 conf/layer.conf 内（machine override 收口到 Q6A），
-# 做到「引入 layer = 启用面板」，故此处无需 local_conf_header。
+# 语义（关键）：
+#   · meta-mipi-panel 是「货架」——承载本 BSP 需要支持的全部 MIPI 屏，
+#     只让各屏「可用」，不因被引入就启用任何一块。
+#   · 本片段是「选择」——它既引入货架层，又在 local_conf_header 里把魅族 E3
+#     这一块屏真正接进构建（装包、模块自动加载、dtbo 登记、provider 登记）。
+#   · 故「选中本片段 = 启用魅族 E3」；想换/加别的屏，写另一个同类选择片段即可，
+#     而不必改动货架层本身。
 #
 # 依赖的 i2c GENI SE 固件 qupv3fw.elf 是板级基础能力，由 meta-radxa-dragon
 # 的 qcom-qupv3fw-rootfs 提供（机器配置 RRECOMMENDS），不在本片段范围。
@@ -19,11 +23,24 @@ header:
 
 repos:
 
-  # meta-mipi-panel：自包含 MIPI 屏适配层，含魅族 E3 的三块 OOT 驱动源与 .dtso。
+  # meta-mipi-panel：自包含 MIPI 屏货架层，含魅族 E3 的三块 OOT 驱动源与 .dtso。
   # 远端锁定（由 kas 从远端 clone/checkout 到 layers/meta-mipi-panel）。
   # 需本地调试时：注释下面 3 行，改用 `path: ../meta-mipi-panel`（同级本地副本）。
   meta-mipi-panel:
     url: https://github.com/CmST0us/meta-mipi-panel.git
     branch: scarthgap
-    commit: 2b3fab37253beebe45d8eb47034d0455a34874ab
+    commit: 56cfec8ea2c4008a57498b74438550f7cacd6308
     path: layers/meta-mipi-panel
+
+# ── 选择动作：把魅族 E3 这一块屏接进构建 ─────────────────────────────────────
+# 都用 :qcs6490-radxa-dragon-q6a 机器 override 收口，万一与别的机器组合也不误装。
+local_conf_header:
+  meizu-e3-panel: |
+    # 三块 OOT 驱动装入镜像，并配置开机自动加载
+    IMAGE_INSTALL:append:qcs6490-radxa-dragon-q6a = " meizu-e3-panel"
+    KERNEL_MODULE_AUTOLOAD:append:qcs6490-radxa-dragon-q6a = " panel_meizu_e3 sgm37604a sec_ts"
+    # 把 meizu-e3-panel 配方登记为 dtbo provider（mergedtb 会 depend 其 do_deploy，
+    # 保证 dtbo 在合并前已部署到 tech_dtbs/）
+    KERNEL_TECH_DTBO_PROVIDERS:append:qcs6490-radxa-dragon-q6a = " meizu-e3-panel"
+    # 选中本屏的 dtbo，交给 linux-qcom-mergedtb.bbappend 并入机器的 KERNEL_TECH_DTBOS
+    MIPI_PANEL_DTBOS:append:qcs6490-radxa-dragon-q6a = " meizu-e3-panel.dtbo"
