@@ -296,3 +296,83 @@ append-only 时间线。每条以 `## [YYYY-MM-DD] <type> | <title>` 开头。
 - 影响页/文件：components/machine-qcs6490-radxa-dragon-q6a.md（GPU/VPU/USB 与 DTB 来源），
   components/driver-wifi-bt-aic8800d80.md（aic8800 依赖 USB host，先决条件=正确 DTB），topics/flashing.md
   （DTB 来源/dtb-qcom-image 与引导固件 stock dtb 的关系）。诊断命令与 boot.log 取证法可回填上述页。
+
+## [2026-06-06] finding | 定位 DTB 来源：UEFI 内嵌（非 dtb 分区）——分区里其实是正确的 BSP dtb 却被无视
+- 背景：承接上条，需确认设备 DTB 来自 `dtb` 分区还是 UEFI 内嵌，以定修复落点。
+- 取证（ssh + scp，已装公钥免密）：
+  · 运行中内核拿到的 fdt：`/sys/firmware/fdt` = 138440B，md5 `78cba8ae…`；反编译为 USB `qcom,sc7280-dwc3`+
+    `qcom,snps-dwc3`、gpu `qcom,adreno-635.0`(无 zap 绑定)、venus `qcom,sc7280-venus`、**无 qcom,msm-id/board-id**，
+    且多一个 `model="QCS6490-Radxa-Dragon-Q6A"` 子节点。
+  · `dtb_a` 分区(sde2，64MB FAT 镜像)：全区仅 1 处 FDT magic，提取出的 dtb = 238428B，md5 `e6492c8a…`，
+    **与本次构建的 `combined-dtb.dtb` 字节完全一致**（USB `qcom,dwc3`、gpu+zap-shader `a660_zap.mbn`、
+    有 `qcom,msm-id=<497/498/475/515 …>`、`qcom,board-id=<32,2/32,602>`、`qcom,gpu-model="Adreno643v1"`）。
+  · `dtb_b`(sde20) 全 0；uefi_a(sde5)/imagefv(sde13) 内无 FDT magic、无 `snps-dwc3` 串。
+  · 真凶：解压 SPI NOR `flat_build/spinor/dragon-q6a/uefi.elf` 偏移 315880 的 gzip 段(5.6MB)，内含
+    `snps-dwc3`×2 + `QCS6490-Radxa-Dragon-Q6A`×1 —— 即运行中那棵 138KB dtb 的指纹。
+- 结论：**设备 DTB 由预编译 UEFI（SPI NOR 的 `uefi.elf`，来自 `flat_build_251013`）gzip 内嵌提供，UEFI 完全
+  不读 `dtb` 分区**。而 `dtb` 分区里恰恰是正确的 BSP combined-dtb（与构建产物一致），白白被无视。
+- 成因：内核是用户自构建(radxa/kernel rev 2e366d0)，UEFI 却用 Radxa 预编译 251013 包，两者内嵌的设备树
+  已分叉 → 新内核 + UEFI 旧内嵌 dtb = USB(`snps-dwc3`无驱动)/GPU/VPU/display 全失败。
+- 修复方向（候选，待选型）：① 让 UEFI 改从 `dtb` 分区按 msm-id/board-id 择优加载（BSP dtb 已带这两属性，
+  若 UEFI 支持分区加载则最干净）——需查这版 Radxa QCLINUX UEFI 的 dtb 加载策略/开关；② 换用内嵌正确 dtb
+  或支持分区加载的更新 UEFI/boot 固件（注意 LE，勿 WP）；③ 重打 uefi.elf 内嵌 dtb（脆弱、可能涉签名，不推荐）。
+  仅刷 `dtb` 分区/`dtb-qcom-image` 对本机无效（UEFI 不读它）。
+- 影响页/文件：topics/flashing.md（新增「DTB 来源=UEFI 内嵌、dtb 分区被无视」一节）、
+  components/machine-qcs6490-radxa-dragon-q6a.md（DTB 来源与 boot 固件配套）。
+
+## [2026-06-06] finding | UEFI dtb 加载策略查清：内嵌发 DT、不读 dtb 分区；路径1 不可行，正解=systemd-boot `devicetree` 行
+- 目标：确认这版 UEFI 是否会从 dtb 分区加载、路径1（让 UEFI 读分区）是否可行。
+- UEFI 取证（解压 SPI NOR `uefi.elf` 的 gzip FV 段 + 设备 efivars/ESP）：
+  · UEFI = Qualcomm Linux SPF 1.0 / KodiakLAA（QCS6490 LE，预编译）。FV 里只有 `DTBExtnProtocol` + `DtbBuffer`
+    变量机制，**无任何 dtb 分区加载/分区 GUID 字符串**；运行 dtb 指纹(`snps-dwc3`×2 等)就在 FV 的 gzip 段里。
+    → UEFI 把 base dtb 编死在 FV，经 DtbBuffer/EFI DT 表发出，**不读 dtb_a 分区**。
+  · UEFI **提供 `EFI_DT_FIXUP_PROTOCOL`**（FV 有 `DtFixup` 事件注册）——外部 dtb 可被固件做内存等修正。
+  · Secure Boot = **关闭**（`SecureBoot` efivar 值 0）。
+- 启动链（设备 ESP 实查）：UEFI → **systemd-boot 255.17**(`/boot/EFI/BOOT/bootaa64.efi`) →
+  **type-1 条目** `/boot/loader/entries/ostree-1.conf`（OSTree 管理，分立 `linux /ostree/.../vmlinuz` +
+  `initrd …`，**非 UKI**）→ 内核。条目**无 `devicetree` 行** → sd-boot 透传固件内嵌 dtb 给内核 = 病根直接原因。
+  注：`linux-qcom-uki.bb` 虽建 UKI 且 ukify 缺 `--dtb`，但 sota/ostree 路径走 type-1 条目、不经该 UKI。
+- 结论：**路径1（让 UEFI 从 dtb 分区加载）不可行**——UEFI 是签名预编译 SPF blob，无对外开关、无法重编，
+  dtb_a 永不被读。**订正**前述 wiki/log「DTB 由 UEFI 从 dtb_a 分区加载」为错误假设（该假设曾导致误判 dtb 非病因）。
+- 正解（已验证可行、且在 BSP 内）：给 systemd-boot 的 type-1 条目加 `devicetree <BSP combined-dtb>` 行并把该
+  dtb 部署到 ESP/ostree boot 目录。sd-boot 255.17 支持 `devicetree` + UEFI 有 `EFI_DT_FIXUP_PROTOCOL`，
+  会加载 BSP dtb 并带固件修正安装，覆盖内嵌 dtb。BSP dtb 已含 USB `qcom,dwc3`/GPU zap/msm-id，覆盖后
+  USB(adb+aic8800)/GPU/VPU/display 应一并恢复。可先在设备上手改条目热验证（reversible，注意单条目误改不启动需 EDL 兜底）。
+- 影响页/文件：topics/flashing.md（DTB 来源=UEFI 内嵌、修法=sd-boot devicetree）、qualcomm-linux.html 与本 log
+  line165 的「从 dtb_a 加载」需订正、components/machine-*.md（boot/dtb 机制）。集成落点：OSTree/bootloader 条目
+  生成处（meta-updater/sota 或 KERNEL_DEVICETREE 部署 + 条目模板加 devicetree）。
+
+## [2026-06-06] finding | 代码级坐实内核 dtb 加载逻辑：arm64 EFI stub 从 EFI 配置表取 dtb；多一条 `dtb=` 修复杠杆
+- 源码(本机检出 kernel-source) `drivers/firmware/efi/libstub/fdt.c` `allocate_new_fdt_and_exit_boot`：
+  · fdt.c:249-260 若 `CONFIG_EFI_ARMSTUB_DTB_LOADER` 且 secure boot 关 且 cmdline 含 `dtb=` → `efi_load_dtb()`
+    从 ESP 文件加载（"Using DTB from command line"）；
+  · 否则 fdt.c:266 `get_fdt()` → fdt.c:364 `get_efi_config_table(DEVICE_TREE_GUID)` 读 EFI 配置表里
+    引导层/固件装入的 dtb（"Using DTB from configuration table"）；都无则空 dtb。
+- 即 arm64+UEFI 下内核不自带/不指定 dtb，取自 EFI 配置表 —— 由引导层决定。现状：sd-boot 条目无
+  `devicetree` 行、cmdline 无 `dtb=` → 配置表里是 UEFI 内嵌 stock dtb → 内核用错。内核行为本身正确。
+- 设备内核配置已查证：`CONFIG_EFI_ARMSTUB_DTB_LOADER=y`、`CONFIG_EFI_GENERIC_STUB=y`，Secure Boot 关。
+- 故有两条修复杠杆（均从 ESP 读正确 BSP dtb、均不碰 UEFI）：
+  A) boot 条目加 `devicetree <dtb>`（sd-boot 255.17 装入配置表，UEFI 有 EFI_DT_FIXUP_PROTOCOL）；
+  B) cmdline(options) 加 `dtb=<dtb>`（内核 stub 直接加载，优先级高于配置表；本机条件满足）。
+- 集成落点：A/B 都需把 BSP combined-dtb 部署进 ESP/ostree boot 目录，并在 OSTree 启动条目生成处注入
+  devicetree 行或 dtb= cmdline（meta-updater/sota bootloader 集成）。
+
+## [2026-06-07] change | 落地路径 A（OSTREE_DEPLOY_DEVICETREE）修复 dtb：USB/GPU/VPU/display 全恢复
+- 承接 2026-06-06 finding，实施 change `fix-dtb-via-ostree-devicetree`（openspec），分两步并真机验证通过。
+- 修法：打开 `OSTREE_DEPLOY_DEVICETREE` 让 OSTree 在 systemd-boot type-1 条目写出 `devicetree` 行，
+  指向构建出的 `combined-dtb.dtb`（含 graphics/video 叠加）覆盖 UEFI 内嵌旧 stock dtb。
+- 落地改动（均在本地副本 meta-radxa-dragon；kas 切本地开发模式 `path: ../meta-radxa-dragon`）：
+  · `conf/machine/qcs6490-radxa-dragon-q6a.conf`：`OSTREE_DEPLOY_DEVICETREE:forcevariable="1"` +
+    `OSTREE_DEVICETREE:forcevariable="combined-dtb.dtb"`；
+  · `recipes-kernel/images/linux-qcom-mergedtb.bb`：加 `inherit deploy` + `do_deploy`（投
+    combined-dtb.dtb 到 DEPLOY_DIR_IMAGE）+ `addtask deploy after do_compile before do_build`；
+  · 新建 `recipes-sota/ostree-kernel-initramfs/ostree-kernel-initramfs_%.bbappend`：
+    `do_install[depends] += "linux-qcom-mergedtb:do_deploy"`。
+- 实施中发现并修正的两个坑：① distro qcom-base.inc 硬 `=` 写死这三个变量、解析在 machine/local 之后，
+  普通 `=` 会被盖回 → 必须 `:forcevariable`；② `OSTREE_DEVICETREE` 默认 `${KERNEL_DEVICETREE}` 在
+  ostree-kernel-initramfs 配方里为空（KERNEL_DEVICETREE 是 :pn-linux-qcom-custom 限定）→ 必须显式设。
+- 验证：构建层 `ostree-*.conf` 出现 `devicetree` 行、部署 devicetree=238428B（=combined）；真机 adb
+  `/sys/firmware/fdt`=240545B、USB(dwc3)/GPU(kgsl Adreno643v1)/VPU(iris venus)/display(card0+HDMI) 全好。
+  残留 `msm_dpu: no GPU device` 为 KGSL/DRM 架构分离的良性提示，与本改动无关。
+- 影响 wiki 页：新增 topics/dtb-and-boot-devicetree.md（主页面）；更新 components/machine-*.md、index.md。
+- 相关：openspec/changes/fix-dtb-via-ostree-devicetree/（proposal/design/specs/tasks）。

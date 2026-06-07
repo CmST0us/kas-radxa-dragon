@@ -1,6 +1,6 @@
 # Machine: qcs6490-radxa-dragon-q6a
 
-_最后更新：2026-06-06_
+_最后更新：2026-06-07_
 
 Radxa Dragon Q6A 开发板的机器配置，定义在
 `meta-radxa-dragon/conf/machine/qcs6490-radxa-dragon-q6a.conf`，SoC 为 Qualcomm **QCS6490**。
@@ -39,6 +39,21 @@ Radxa Dragon Q6A 开发板的机器配置，定义在
 「全量刷 UFS 仍不启动」的真因——UFS 刷写不碰 SPI NOR）。判别与刷写见
 [flashing](../topics/flashing.md)（含 LE vs WP 对照表与 `flash-edl.sh` 防呆）。
 
+## 设备树（dtb）来源与修复
+
+内核设备树**不由 UEFI 提供也不从 dtb 分区加载**——这版预编译 UEFI 把旧 stock dtb 写死在固件里
+经 EFI 配置表交给内核，导致 USB/GPU/VPU/display 全废。修法：用 `OSTREE_DEPLOY_DEVICETREE` 让
+OSTree 在 systemd-boot 启动条目写出 `devicetree` 行，指向构建出的 `combined-dtb.dtb`（含
+`qcm6490-graphics/video.dtbo` 叠加）覆盖固件内嵌树。本机机器配置据此新增：
+
+- `OSTREE_DEPLOY_DEVICETREE:forcevariable = "1"`
+- `OSTREE_DEVICETREE:forcevariable = "combined-dtb.dtb"`
+
+（均须 `:forcevariable`——distro 用硬 `=` 写死且解析在后；`combined-dtb.dtb` 由本 layer
+`linux-qcom-mergedtb` 补的 `do_deploy` 投到 `DEPLOY_DIR_IMAGE`。）
+
+> 机制、两个坑、验证锚点与真机结果，全在 **[dtb-and-boot-devicetree](../topics/dtb-and-boot-devicetree.md)**。
+
 ## 同 layer 的另一机器
 
 `qcs9075-radxa-airbox-q900`（AIRbox Q900）也由 meta-radxa-dragon 提供，但不在本仓库
@@ -49,3 +64,4 @@ target 范围内。
 - [layers](layers.md)
 - [distro-and-images](../topics/distro-and-images.md)
 - [flashing](../topics/flashing.md) — SPI 引导固件 LE vs WP、edl-ng/qdl 刷写
+- [dtb-and-boot-devicetree](../topics/dtb-and-boot-devicetree.md) — dtb 来源与 OSTREE_DEPLOY_DEVICETREE 修复

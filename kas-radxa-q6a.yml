@@ -126,12 +126,14 @@ repos:
 
   # --- 板级 overlay (远端锁定) ---
   # 由 kas 从远端 clone/checkout 到 layers/meta-radxa-dragon。
-  # commit bf47b24 含 AIC8800D80 WiFi/BT 固件安装与 gflags master->main 修复。
+  # commit e7cfe34 = bf47b24(AIC8800D80 固件 + gflags 修复) + dtb 修复
+  #   (OSTREE_DEPLOY_DEVICETREE 部署 combined-dtb，修好 USB/GPU/VPU/display；
+  #    见 wiki/topics/dtb-and-boot-devicetree.md)。
   # 需本地调试时：注释下面 4 行，改用 `path: ../meta-radxa-dragon`（同级本地副本）。
   meta-radxa-dragon:
     url: https://github.com/CmST0us/meta-radxa-dragon.git
     branch: scarthgap
-    commit: bf47b24bdb3f30b20c5152fe46638aef6236d891
+    commit: e7cfe34efdf9d42833098fb3f725c05b283176e5
     path: layers/meta-radxa-dragon
 
 # ── local.conf 内容 (替代原 set_bb_env.sh 生成的 local/auto/site.conf) ──
@@ -174,6 +176,10 @@ local_conf_header:
   rm-work-dev: |
     # INHERIT += "rm_work"
     # RM_WORK_EXCLUDE += "linux-qcom-custom linux-qcom-uki qcom-multimedia-image"
+
+  # 注：dtb 修复（fix-dtb-via-ostree-devicetree）的开关已固化进本地副本 machine conf
+  # (../meta-radxa-dragon/conf/machine/qcs6490-radxa-dragon-q6a.conf 的
+  #  OSTREE_DEPLOY_DEVICETREE/OSTREE_DEVICETREE:forcevariable)，此处不再放临时块。
 
   # 来自原 site.conf。DL_DIR/SSTATE_DIR 默认落在本仓库根目录下，用 ?=
   # 便于通过环境变量覆盖以复用外部缓存 (${TOPDIR} 为构建目录，其上一级即仓库根)。

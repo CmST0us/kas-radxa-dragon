@@ -38,11 +38,12 @@ diff 即知哪些 layer 变了。目前尚未启用该模式（仍直接在主 y
 meta-radxa-dragon:
   url: https://github.com/CmST0us/meta-radxa-dragon.git
   branch: scarthgap
-  commit: bf47b24bdb3f30b20c5152fe46638aef6236d891   # 含 aic8800 固件 + gflags 修复
+  commit: e7cfe34efdf9d42833098fb3f725c05b283176e5   # aic8800 固件 + gflags 修复 + dtb 修复
   path: layers/meta-radxa-dragon
 ```
-锁定的 `bf47b24` 即远端 `scarthgap` 的 HEAD，已包含本地开发期的两笔提交
-（`b82b968` 装 AIC8800D80 固件、`bf47b24` gflags master→main）。
+锁定的 `e7cfe34` 即远端 `scarthgap` 的 HEAD，已包含本地开发期的提交：
+`b82b968`（装 AIC8800D80 固件）、`bf47b24`（gflags master→main）、`e7cfe34`
+（dtb 修复，见 [dtb-and-boot-devicetree](dtb-and-boot-devicetree.md)）。
 
 **需要再次本地调试时**：注释上面 `url/branch/commit/path` 4 行，改用
 ```yaml

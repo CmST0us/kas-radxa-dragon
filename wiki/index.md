@@ -1,6 +1,6 @@
 # Index — kas-radxa-dragon wiki
 
-_最后更新：2026-06-06_
+_最后更新：2026-06-07_
 
 本知识库的内容目录。回答关于本仓库的问题时，先从这里定位页面。
 
@@ -17,6 +17,7 @@ _最后更新：2026-06-06_
 - [topics/versioning](topics/versioning.md) — layer 版本锁定、lockfile、本地↔远端切换
 - [topics/distro-and-images](topics/distro-and-images.md) — `qcom-wayland` 与 `qcom-multimedia-image` 的区别与关系
 - [topics/flashing](topics/flashing.md) — EDL 模式刷写固件：`edl-ng`（`scripts/flash-edl.sh`，只刷 LUN0/OS）与 `qdl`（全量 LUN0–5，含引导固件）
+- [topics/dtb-and-boot-devicetree](topics/dtb-and-boot-devicetree.md) — 内核设备树来源（UEFI 内嵌）与修复：`OSTREE_DEPLOY_DEVICETREE` 让启动条目写 `devicetree` 行覆盖固件旧树，修好 USB/GPU/VPU/display
 
 ## Components（实体：具体的东西）
 - [components/layers](components/layers.md) — 12 个 layer 的 URL / 锁定 commit / 角色

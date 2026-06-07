@@ -22,7 +22,7 @@ _最后更新：2026-06-03_
 | meta-qcom-hwe | github.com/qualcomm-linux | `a5fdd68` | 根（机器定义所在） |
 | meta-qcom-distro | github.com/qualcomm-linux | `08cc4b0` | 根（distro 定义所在） |
 | meta-qcom-qim-product-sdk | github.com/qualcomm-linux | `eb937f9` | 根 |
-| **meta-radxa-dragon** | github.com/CmST0us（fork） | `bf47b24`（scarthgap 最新） | 根（板级 overlay） |
+| **meta-radxa-dragon** | github.com/CmST0us（fork） | `e7cfe34`（scarthgap 最新） | 根（板级 overlay） |
 
 ## 子 layer 的处理
 
@@ -33,7 +33,7 @@ _最后更新：2026-06-03_
 
 ## meta-radxa-dragon（板级 overlay）
 
-当前为**远端锁定模式**（commit `bf47b24`，即远端 scarthgap HEAD / 分支最新），详见
+当前为**远端锁定模式**（commit `e7cfe34`，即远端 scarthgap HEAD / 分支最新），详见
 [versioning](../topics/versioning.md)。它提供：
 - machine 配置 `qcs6490-radxa-dragon-q6a`（见 [machine 页](machine-qcs6490-radxa-dragon-q6a.md)）；
 - 自定义内核 `linux-qcom-custom`（radxa kernel fork）；

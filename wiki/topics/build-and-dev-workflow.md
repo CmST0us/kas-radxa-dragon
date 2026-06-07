@@ -33,7 +33,7 @@ kas shell kas-radxa-q6a.yml      # 进入配好的 bitbake 环境，手动 bitba
 
 ## 本地开发 meta-radxa-dragon
 
-当前 `meta-radxa-dragon` 为**远端锁定模式**（commit `bf47b24`，由 kas 检出到 `layers/`）。
+当前 `meta-radxa-dragon` 为**远端锁定模式**（commit `e7cfe34`，由 kas 检出到 `layers/`）。
 需要调试板级配置、驱动、固件（如 [aic8800](../components/driver-wifi-bt-aic8800d80.md)）时，
 可临时把它切回同级本地副本 `../meta-radxa-dragon`（改动即时生效、无需 push），
 切换与回切步骤见 [versioning](versioning.md)。

@@ -95,7 +95,7 @@ wiki/
 
 ## 四、工作流
 
-### 同步（每次改动后必做）
+### 同步(当我和你说需要同步到 wiki 的时候做，如果需要自动同步，需要获得我的确认)
 1. 判断本次改动影响哪些 wiki 页，更新这些页（事实先核实再写）。
 2. 若新增/删除了页面，更新 `index.md`。
 3. 向 `log.md` **追加**一条记录（见下方格式）。一次改动可能触及多页，但只记一条 log。
@@ -126,8 +126,10 @@ wiki/
 ## 五、当前状态备忘（易变，细节以 wiki 为准）
 
 - `meta-radxa-dragon` 目前为**远端锁定模式**：`kas-radxa-q6a.yml` 锁定
-  `url: https://github.com/CmST0us/meta-radxa-dragon.git` 的 commit `bf47b24`（远端 scarthgap HEAD，
-  含 aic8800 固件与 gflags 修复）。需本地调试时再临时切回 `path: ../meta-radxa-dragon`（见 wiki versioning）。
+  `url: https://github.com/CmST0us/meta-radxa-dragon.git` 的 commit `e7cfe34`（远端 scarthgap HEAD，
+  含 aic8800 固件、gflags 修复，以及 dtb 修复——OSTREE_DEPLOY_DEVICETREE 部署 combined-dtb 修好
+  USB/GPU/VPU/display，见 wiki/topics/dtb-and-boot-devicetree.md）。需本地调试时再临时切回
+  `path: ../meta-radxa-dragon`（见 wiki versioning）。
 - 请在本仓库目录（`kas-radxa-dragon/`）下运行 kas，使相对路径与缓存正确解析。
 
 ---
